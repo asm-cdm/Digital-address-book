@@ -1,0 +1,1690 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Digital Address Book Ver 1.1</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+<style>
+  :root{
+    --paper:#F6F1E4;
+    --paper-2:#EFE7D3;
+    --ink:#2A2A28;
+    --ink-soft:#6B6459;
+    --teal:#2F4F4C;
+    --teal-dark:#1E3634;
+    --brass:#B08A3E;
+    --brass-soft:#DDBE84;
+    --card:#FFFFFF;
+    --danger:#A5403A;
+    --line:#E0D6BE;
+    --radius:14px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  #fab-app{
+    font-family:'Inter',sans-serif;
+    background:var(--paper);
+    color:var(--ink);
+    min-height:100vh;
+    display:flex;
+    justify-content:center;
+  }
+  .phone{
+    width:100%;
+    max-width:430px;
+    min-height:100vh;
+    background:var(--paper);
+    display:flex;
+    flex-direction:column;
+    position:relative;
+  }
+  .topbar{
+    padding:22px 20px 14px;
+    background:var(--teal-dark);
+    color:var(--paper);
+    position:sticky;
+    top:0;
+    z-index:5;
+  }
+  .topbar-row{
+    display:flex;
+    align-items:flex-start;
+    justify-content:space-between;
+    gap:10px;
+  }
+  .reset-link{
+    background:transparent;
+    border:1px solid rgba(255,255,255,0.35);
+    color:#E7C7C2;
+    font-size:11px;
+    font-family:'Inter',sans-serif;
+    font-weight:600;
+    padding:5px 11px;
+    border-radius:20px;
+    cursor:pointer;
+    white-space:nowrap;
+    flex-shrink:0;
+    margin-top:3px;
+  }
+  .owner-line-row{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    font-size:10.5px;
+    color:#9CA79F;
+    margin-top:5px;
+    letter-spacing:0.02em;
+  }
+  .topbar h1{
+    font-family:'Fraunces',serif;
+    font-weight:700;
+    font-size:22px;
+    margin:2px 0 0;
+  }
+  .topbar .sub{
+    font-size:12.5px;
+    color:#C9CFC9;
+    margin-top:2px;
+  }
+  .sub-row{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:8px;
+  }
+  .backup-link{
+    background:transparent;
+    border:1px solid var(--brass-soft);
+    color:var(--brass-soft);
+    font-size:11px;
+    font-family:'Inter',sans-serif;
+    font-weight:600;
+    padding:5px 11px;
+    border-radius:20px;
+    cursor:pointer;
+    white-space:nowrap;
+    flex-shrink:0;
+  }
+  .entity-tabs{
+    display:flex;
+    gap:6px;
+    padding:12px 16px 0;
+    background:var(--paper);
+    position:sticky;
+    top:0;
+    z-index:4;
+  }
+  .entity-tab{
+    flex:1;
+    text-align:center;
+    padding:9px 6px;
+    border-radius:10px 10px 0 0;
+    font-size:13px;
+    font-weight:600;
+    color:var(--ink-soft);
+    background:var(--paper-2);
+    border:1px solid var(--line);
+    border-bottom:none;
+    cursor:pointer;
+  }
+  .entity-tab.active{
+    background:var(--card);
+    color:var(--teal-dark);
+  }
+  .screen{
+    flex:1;
+    padding:16px;
+    padding-bottom:100px;
+    background:var(--card);
+    border-top:1px solid var(--line);
+  }
+  .section-label{
+    font-family:'Fraunces',serif;
+    font-weight:700;
+    font-size:17px;
+    color:var(--teal-dark);
+    margin:0 0 12px;
+  }
+  label{
+    display:block;
+    font-size:12px;
+    font-weight:600;
+    color:var(--ink-soft);
+    margin:14px 0 6px;
+    text-transform:uppercase;
+    letter-spacing:0.04em;
+  }
+  label:first-of-type{margin-top:0;}
+  select, input[type=text], input[type=email], input[type=tel], textarea{
+    width:100%;
+    font-family:'Inter',sans-serif;
+    font-size:15px;
+    padding:11px 12px;
+    border-radius:10px;
+    border:1.5px solid var(--line);
+    background:var(--paper);
+    color:var(--ink);
+    outline:none;
+  }
+  select:focus, input:focus, textarea:focus{
+    border-color:var(--teal);
+  }
+  textarea{resize:vertical;min-height:110px;font-family:'Inter',sans-serif;}
+  .addr-field{
+    width:25ch;
+    max-width:100%;
+    min-height:0;
+    height:calc(7 * 1.35em + 22px);
+  }
+  .addr-box{
+    width:25ch;
+    max-width:100%;
+    height:calc(7 * 1.35em + 12px);
+    overflow-y:auto;
+    border:1px solid var(--line);
+    border-radius:6px;
+    padding:6px 8px;
+    background:var(--paper);
+    white-space:pre-line;
+  }
+  .row2{display:flex;gap:10px;}
+  .row2>div{flex:1;}
+  .btn{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    gap:6px;
+    padding:12px 18px;
+    border-radius:10px;
+    border:none;
+    font-size:14.5px;
+    font-weight:600;
+    cursor:pointer;
+    font-family:'Inter',sans-serif;
+  }
+  .btn-primary{background:var(--teal-dark);color:var(--brass-soft);width:100%;margin-top:20px;}
+  .btn-danger{background:transparent;color:var(--danger);border:1.5px solid var(--danger);}
+  .btn-outline{background:transparent;color:var(--teal-dark);border:1.5px solid var(--teal);}
+  .btn-small{padding:8px 12px;font-size:13px;}
+  .inline-add{display:flex;gap:8px;margin-top:6px;}
+  .inline-add input{flex:1;}
+  .card-item{
+    background:var(--paper);
+    border:1px solid var(--line);
+    border-left:4px solid var(--brass);
+    border-radius:10px;
+    padding:12px 14px;
+    margin-bottom:10px;
+  }
+  .card-item .name{
+    font-family:'Fraunces',serif;
+    font-weight:700;
+    font-size:16px;
+    color:var(--teal-dark);
+  }
+  .card-item .tag{
+    display:inline-block;
+    font-size:10.5px;
+    font-weight:600;
+    color:var(--teal-dark);
+    background:var(--brass-soft);
+    padding:2px 8px;
+    border-radius:20px;
+    margin:4px 6px 4px 0;
+    text-transform:uppercase;
+    letter-spacing:0.03em;
+  }
+  .card-item .addr{
+    font-size:13px;
+    color:var(--ink-soft);
+    margin:6px 0;
+    white-space:pre-line;
+  }
+  .card-item .contact-line{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:12.5px;
+    color:var(--ink);
+    margin:2px 0;
+  }
+  .card-item .note-line{
+    font-size:12.5px;
+    font-style:italic;
+    color:var(--teal);
+    margin:4px 0;
+  }
+  .card-actions{display:flex;gap:8px;margin-top:10px;}
+  .empty{
+    text-align:center;
+    padding:40px 10px;
+    color:var(--ink-soft);
+  }
+  .empty .big{font-family:'Fraunces',serif;font-size:17px;color:var(--teal-dark);margin-bottom:6px;}
+  .bottomnav{
+    position:fixed;
+    bottom:0;
+    left:50%;
+    transform:translateX(-50%);
+    width:100%;
+    max-width:430px;
+    display:flex;
+    background:var(--teal-dark);
+    border-top:1px solid #17282680;
+    z-index:10;
+  }
+  .navbtn{
+    flex:1;
+    text-align:center;
+    padding:12px 4px 10px;
+    color:#A9BDB8;
+    cursor:pointer;
+    font-size:11.5px;
+    font-weight:600;
+    letter-spacing:0.02em;
+    border-top:3px solid transparent;
+  }
+  .navbtn .icon{font-size:19px;display:block;margin-bottom:2px;}
+  .navbtn.active{color:var(--brass-soft);border-top-color:var(--brass);}
+  .toast{
+    position:fixed;
+    bottom:78px;
+    left:50%;
+    transform:translateX(-50%);
+    background:var(--teal-dark);
+    color:var(--paper);
+    padding:10px 18px;
+    border-radius:20px;
+    font-size:13px;
+    box-shadow:0 4px 14px rgba(0,0,0,0.2);
+    z-index:20;
+    max-width:80%;
+    text-align:center;
+    opacity:0;
+    pointer-events:none;
+    transition:opacity 0.25s;
+  }
+  .toast.show{opacity:1;}
+  .modal-backdrop{
+    position:fixed;inset:0;background:rgba(20,20,18,0.45);
+    display:flex;align-items:center;justify-content:center;z-index:30;
+    padding:20px;
+  }
+  .modal{
+    background:var(--card);
+    border-radius:14px;
+    padding:20px;
+    width:100%;
+    max-width:340px;
+  }
+  .modal p{font-size:14px;color:var(--ink);margin:0 0 18px;}
+  .modal .actions{display:flex;gap:10px;justify-content:flex-end;}
+  .filterbar{display:flex;gap:8px;margin-bottom:14px;}
+  .filterbar select{font-size:13px;padding:9px 10px;}
+  .count-pill{
+    font-size:11px;color:var(--ink-soft);margin-left:8px;
+  }
+  .selectall-row{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:12px;
+  }
+  .selectall-row label{
+    display:flex;
+    align-items:center;
+    gap:7px;
+    font-size:13px;
+    font-weight:600;
+    text-transform:none;
+    letter-spacing:normal;
+    color:var(--teal-dark);
+    margin:0;
+  }
+  .selectall-row input[type=checkbox]{width:16px;height:16px;}
+  .field-check-grid{
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px 16px;
+    margin-top:8px;
+  }
+  .field-check{
+    display:flex;
+    align-items:center;
+    gap:6px;
+    font-size:13px;
+    font-weight:400;
+    text-transform:none;
+    letter-spacing:normal;
+    color:var(--ink);
+    margin:0;
+  }
+  .field-check input{width:15px;height:15px;}
+  .section-heading{
+    font-family:'Fraunces',serif;
+    font-weight:700;
+    font-size:14px;
+    color:var(--teal-dark);
+    background:var(--brass-soft);
+    padding:6px 10px;
+    border-radius:8px;
+    margin:16px 0 8px;
+  }
+  .section-heading:first-child{ margin-top:0; }
+  .card-item label{
+    display:flex;
+    align-items:flex-start;
+    gap:9px;
+    font-size:13px;
+    font-weight:400;
+    text-transform:none;
+    letter-spacing:normal;
+    color:var(--ink);
+    margin:0;
+    cursor:pointer;
+  }
+  .card-item input[type=checkbox]{
+    width:16px;height:16px;margin-top:3px;flex-shrink:0;
+  }
+  .card-item .card-body{flex:1;min-width:0;}
+</style>
+</head>
+<body>
+
+<div id="fab-app">
+  <div class="phone">
+    <div class="topbar">
+      <div class="topbar-row">
+        <h1>Digital Address Book</h1>
+        <button id="resetBtn" class="reset-link" type="button">⟲ Reset</button>
+      </div>
+      <div class="sub-row">
+        <div class="sub" id="topSub">Add a new Group, Subgroup, Address Entry</div>
+        <button id="backupBtn" class="backup-link" type="button">⇅ Backup</button>
+      </div>
+      <div class="owner-line-row">
+        <span>Powered by A.S.M Consultancy Services</span>
+        <span>Ver 1.1</span>
+      </div>
+      <div class="owner-line-row">
+        <span>Chidambaram</span>
+      </div>
+    </div>
+
+    <div class="entity-tabs" id="entityTabs"></div>
+    <div class="screen" id="screen"></div>
+
+    <div class="bottomnav" id="bottomNav">
+      <div class="navbtn" data-tab="create"><span class="icon">＋</span>Create</div>
+      <div class="navbtn" data-tab="modify"><span class="icon">✎</span>Modify</div>
+      <div class="navbtn" data-tab="view"><span class="icon">▤</span>View / PDF</div>
+    </div>
+  </div>
+  <div id="toast" class="toast"></div>
+  <div id="modalRoot"></div>
+</div>
+
+<script>
+(function(){
+  const STORE_KEY = 'kudumbam-db-v1';
+  let db = { groups: [], subgroups: [], entries: [] };
+  let state = { tab: 'create', entity: 'address', editingId: null, filterGroup:'', filterSubgroup:'', selectedIds: new Set() };
+
+  const $ = sel => document.querySelector(sel);
+  const screen = $('#screen');
+  const entityTabsEl = $('#entityTabs');
+  const topSub = $('#topSub');
+
+  function uid(p){ return p + Date.now().toString(36) + Math.random().toString(36).slice(2,6); }
+
+  function parseDMY(str){
+    if(!str || !str.trim()) return null;
+    const m = str.trim().match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+    if(!m) return null;
+    const d = parseInt(m[1],10), mo = parseInt(m[2],10), y = parseInt(m[3],10);
+    if(mo<1||mo>12) return null;
+    const dt = new Date(y, mo-1, d);
+    if(dt.getFullYear()!==y || dt.getMonth()!==mo-1 || dt.getDate()!==d) return null;
+    return { day:d, month:mo, year:y };
+  }
+
+  function showToast(msg){
+    const t = $('#toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    clearTimeout(t._timer);
+    t._timer = setTimeout(()=>t.classList.remove('show'), 1800);
+  }
+
+  function confirmModal(msg, onYes, yesLabel){
+    yesLabel = yesLabel || 'Delete';
+    const root = $('#modalRoot');
+    root.innerHTML = `
+      <div class="modal-backdrop">
+        <div class="modal">
+          <p>${msg}</p>
+          <div class="actions">
+            <button class="btn btn-outline btn-small" id="mCancel">Cancel</button>
+            <button class="btn btn-danger btn-small" id="mYes">${yesLabel}</button>
+          </div>
+        </div>
+      </div>`;
+    root.querySelector('#mCancel').onclick = ()=> root.innerHTML='';
+    root.querySelector('#mYes').onclick = ()=>{ root.innerHTML=''; onYes(); };
+  }
+
+  async function storageGet(key){
+    if(window.storage){
+      try{ const r = await window.storage.get(key, false); return r ? r.value : null; }
+      catch(e){ return null; }
+    }
+    try{ return localStorage.getItem(key); }catch(e){ return null; }
+  }
+  async function storageSet(key, val){
+    if(window.storage){
+      try{ await window.storage.set(key, val, false); return; }catch(e){ /* fall through */ }
+    }
+    try{ localStorage.setItem(key, val); }catch(e){ /* storage unavailable */ }
+  }
+
+  async function load(){
+    const val = await storageGet(STORE_KEY);
+    if(val){ try{ db = JSON.parse(val); }catch(e){ /* corrupt, keep defaults */ } }
+    render();
+  }
+  async function save(){
+    await storageSet(STORE_KEY, JSON.stringify(db));
+  }
+
+  function showBackupModal(){
+    const root = $('#modalRoot');
+    root.innerHTML = `
+      <div class="modal-backdrop">
+        <div class="modal">
+          <p style="font-weight:700;color:var(--teal-dark);margin-bottom:6px;">Backup &amp; Restore</p>
+          <p>Save all your data as one file. Copy that file to your other phone or laptop (email it to yourself, WhatsApp it, or use Google Drive / a USB cable), then open it there with Import.</p>
+          <button class="btn btn-primary" id="doExport" style="width:100%;">Export Backup File</button>
+          <button class="btn btn-outline" id="doImport" style="width:100%;margin-top:10px;">Import Backup File</button>
+          <input type="file" id="importFileInput" accept="application/json,.json" style="display:none;">
+          <button class="btn btn-outline" id="closeBackup" style="width:100%;margin-top:10px;">Close</button>
+        </div>
+      </div>`;
+    root.querySelector('#doExport').onclick = exportData;
+    root.querySelector('#doImport').onclick = ()=> root.querySelector('#importFileInput').click();
+    root.querySelector('#importFileInput').onchange = (ev)=> importData(ev.target.files[0]);
+    root.querySelector('#closeBackup').onclick = ()=> root.innerHTML='';
+  }
+
+  function exportData(){
+    const blob = new Blob([JSON.stringify(db, null, 2)], {type:'application/json'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const stamp = new Date().toISOString().slice(0,10);
+    a.href = url;
+    a.download = `digital-address-book-backup-${stamp}.json`;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showToast('Backup file saved');
+  }
+
+  function importData(file){
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = (e)=>{
+      let parsed;
+      try{ parsed = JSON.parse(e.target.result); }
+      catch(err){ showToast('That file could not be read'); return; }
+      if(!parsed || !Array.isArray(parsed.groups) || !Array.isArray(parsed.entries)){
+        showToast('Not a valid backup file'); return;
+      }
+      confirmModal(
+        'Replace all data on this device with the imported backup? This cannot be undone.',
+        ()=>{
+          db = {
+            groups: parsed.groups || [],
+            subgroups: parsed.subgroups || [],
+            entries: parsed.entries || [],
+            lastGroupId: parsed.lastGroupId || null,
+            lastSubgroupId: parsed.lastSubgroupId || null
+          };
+          save();
+          showToast('Backup restored');
+          render();
+        },
+        'Replace'
+      );
+    };
+    reader.readAsText(file);
+  }
+
+  function groupName(id){ const g = db.groups.find(x=>x.id===id); return g? g.name : '—'; }
+  function subgroupName(id){ const s = db.subgroups.find(x=>x.id===id); return s? s.name : '—'; }
+  function subgroupsFor(groupId){ return db.subgroups.filter(s=>s.groupId===groupId); }
+  function entriesFor(groupId, subgroupId){
+    return db.entries.filter(e =>
+      (!groupId || e.groupId===groupId) &&
+      (!subgroupId || e.subgroupId===subgroupId)
+    );
+  }
+
+  function selectOptions(list, valueKey, labelFn, placeholder){
+    let html = `<option value="">${placeholder}</option>`;
+    list.forEach(item=>{ html += `<option value="${item[valueKey]}">${labelFn(item)}</option>`; });
+    return html;
+  }
+
+  // ---------------- CREATE ----------------
+  function renderCreateGroup(){
+    screen.innerHTML = `
+      <div class="section-label">New Group</div>
+      <label>Group name</label>
+      <input type="text" id="gName" placeholder="e.g. Paternal Family">
+      <button class="btn btn-primary" id="saveGroup">Save Group</button>
+      <label style="margin-top:26px;">Existing groups</label>
+      <div id="gList"></div>
+    `;
+    const list = db.groups.map(g=>`<div class="card-item"><span class="name">${g.name}</span><span class="count-pill">${subgroupsFor(g.id).length} subgroup(s)</span></div>`).join('') || `<div class="empty">No groups yet.</div>`;
+    $('#gList').innerHTML = list;
+    $('#saveGroup').onclick = ()=>{
+      const name = $('#gName').value.trim();
+      if(!name){ showToast('Enter a group name'); return; }
+      if(db.groups.some(g=>g.name.toLowerCase()===name.toLowerCase())){
+        showToast('That group already exists'); return;
+      }
+      db.groups.push({id:uid('g'), name});
+      save(); showToast('Group added'); renderCreateGroup();
+    };
+  }
+
+  function renderCreateSubgroup(){
+    const existingNames = [...new Set(db.subgroups.map(s=>s.name))].sort((a,b)=>a.localeCompare(b));
+    screen.innerHTML = `
+      <div class="section-label">New Subgroup</div>
+      <label>Parent group</label>
+      <select id="sgGroup">${selectOptions(db.groups,'id',g=>g.name,'Select a group')}</select>
+      ${existingNames.length ? `
+      <label>Use an existing subgroup name</label>
+      <select id="sgExisting">
+        <option value="">— Type a new name below instead —</option>
+        ${existingNames.map(n=>`<option value="${n}">${n}</option>`).join('')}
+      </select>` : ''}
+      <label>Subgroup name</label>
+      <input type="text" id="sgName" placeholder="e.g. Uncle's Family">
+      <button class="btn btn-primary" id="saveSub">Save Subgroup</button>
+      <label style="margin-top:26px;">Existing subgroups</label>
+      <div id="sgList"></div>
+    `;
+    function refreshList(){
+      const list = db.subgroups.map(s=>`<div class="card-item"><span class="name">${s.name}</span><span class="tag">${groupName(s.groupId)}</span></div>`).join('') || `<div class="empty">No subgroups yet.</div>`;
+      $('#sgList').innerHTML = list;
+    }
+    refreshList();
+    if(db.lastSubgroupGroupId && db.groups.find(g=>g.id===db.lastSubgroupGroupId)){
+      $('#sgGroup').value = db.lastSubgroupGroupId;
+    }
+    if(existingNames.length){
+      $('#sgExisting').onchange = ()=>{
+        const v = $('#sgExisting').value;
+        if(v) $('#sgName').value = v;
+      };
+    }
+    $('#saveSub').onclick = ()=>{
+      const groupId = $('#sgGroup').value;
+      const name = $('#sgName').value.trim();
+      if(!groupId){ showToast('Choose a parent group'); return; }
+      if(!name){ showToast('Enter a subgroup name'); return; }
+      if(db.subgroups.some(s=>s.groupId===groupId && s.name.toLowerCase()===name.toLowerCase())){
+        showToast('That subgroup already exists under this group'); return;
+      }
+      db.subgroups.push({id:uid('s'), groupId, name});
+      db.lastSubgroupGroupId = groupId;
+      save(); showToast('Subgroup added');
+      renderCreateSubgroup();
+    };
+  }
+
+  function renderCreateAddress(){
+    screen.innerHTML = `
+      <div class="section-label">New Address Entry</div>
+      <label>Group</label>
+      <select id="aGroup">${selectOptions(db.groups,'id',g=>g.name,'Select a group')}</select>
+      <label>Subgroup</label>
+      <select id="aSub"><option value="">Select a group first</option></select>
+      <label>Name</label>
+      <input type="text" id="aName" placeholder="Full name">
+      <label>Company Name</label>
+      <input type="text" id="aCompany" placeholder="e.g. ABC Traders (optional)">
+      <label>Note (relation)</label>
+      <input type="text" id="aNote" placeholder="e.g. Cousin, Neighbour, College friend">
+      <label>Related to (optional)</label>
+      <select id="aRelated"><option value="">— None —</option></select>
+      <label>Address</label>
+      <textarea id="aAddr" class="addr-field" rows="7" placeholder="House / street&#10;Area&#10;City&#10;District&#10;State&#10;PIN code"></textarea>
+      <div class="row2">
+        <div><label>Contact No 1</label><input type="tel" id="aC1" placeholder="Primary phone"></div>
+        <div><label>Contact No 2</label><input type="tel" id="aC2" placeholder="Alternate phone"></div>
+      </div>
+      <label>WhatsApp No</label>
+      <input type="tel" id="aWa" placeholder="WhatsApp number">
+      <label>Email ID</label>
+      <input type="email" id="aEmail" placeholder="name@example.com">
+      <label>Birthday (DD/MM/YYYY)</label>
+      <input type="text" id="aBday" placeholder="e.g. 05/08/1990">
+      <label>Wedding Anniversary (DD/MM/YYYY)</label>
+      <input type="text" id="aAnniv" placeholder="e.g. 21/12/2015">
+      <button class="btn btn-primary" id="saveAddr">Save Entry</button>
+    `;
+    function refreshSub(preserveSub){
+      const gid = $('#aGroup').value;
+      $('#aSub').innerHTML = selectOptions(subgroupsFor(gid),'id',s=>s.name, gid? 'Select a subgroup' : 'Select a group first');
+      if(preserveSub) $('#aSub').value = preserveSub;
+      refreshRelated();
+    }
+    function refreshRelated(){
+      const sid = $('#aSub').value;
+      const inScope = sid ? db.entries.filter(en=>en.subgroupId===sid) : [];
+      $('#aRelated').innerHTML = '<option value="">— None —</option>' + inScope.map(en=>`<option value="${en.id}">${en.name}</option>`).join('');
+    }
+    if(db.lastGroupId && db.groups.find(g=>g.id===db.lastGroupId)){
+      $('#aGroup').value = db.lastGroupId;
+    }
+    refreshSub(db.lastSubgroupId);
+    $('#aGroup').onchange = ()=>refreshSub();
+    $('#aSub').addEventListener('change', refreshRelated);
+    $('#saveAddr').onclick = ()=>{
+      const groupId = $('#aGroup').value, subgroupId = $('#aSub').value;
+      const name = $('#aName').value.trim();
+      if(!groupId){ showToast('Choose a group'); return; }
+      if(!subgroupId){ showToast('Choose a subgroup'); return; }
+      if(!name){ showToast('Enter a name'); return; }
+      const bdayRaw = $('#aBday').value.trim(), annivRaw = $('#aAnniv').value.trim();
+      if(bdayRaw && !parseDMY(bdayRaw)){ showToast('Birthday must be DD/MM/YYYY, e.g. 05/08/1990'); return; }
+      if(annivRaw && !parseDMY(annivRaw)){ showToast('Anniversary must be DD/MM/YYYY, e.g. 21/12/2015'); return; }
+      const addressText = $('#aAddr').value.trim();
+      db.entries.push({
+        id: uid('e'), groupId, subgroupId, name,
+        company: $('#aCompany').value.trim(),
+        note: $('#aNote').value.trim(),
+        relatedTo: $('#aRelated').value || '',
+        address: addressText,
+        contact1: $('#aC1').value.trim(),
+        contact2: $('#aC2').value.trim(),
+        whatsapp: $('#aWa').value.trim(),
+        email: $('#aEmail').value.trim(),
+        birthday: bdayRaw,
+        anniversary: annivRaw
+      });
+      db.lastGroupId = groupId;
+      db.lastSubgroupId = subgroupId;
+      save(); showToast('Entry saved');
+      renderCreateAddress();
+      const nameField = $('#aName');
+      if(nameField){
+        nameField.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        nameField.focus();
+      }
+    };
+  }
+
+  // ---------------- MODIFY ----------------
+  function renderModifyGroup(){
+    if(state.editingId){
+      const g = db.groups.find(x=>x.id===state.editingId);
+      if(!g){ state.editingId=null; return renderModifyGroup(); }
+      screen.innerHTML = `
+        <div class="section-label">Edit Group</div>
+        <label>Group name</label>
+        <input type="text" id="egName" value="${g.name}">
+        <button class="btn btn-primary" id="updGroup">Update Group</button>
+        <button class="btn btn-danger" style="width:100%;margin-top:10px;" id="delGroup">Delete Group</button>
+        <button class="btn btn-outline" style="width:100%;margin-top:10px;" id="cancelG">Cancel</button>
+      `;
+      $('#updGroup').onclick = ()=>{
+        g.name = $('#egName').value.trim() || g.name;
+        save(); state.editingId=null; showToast('Group updated'); render();
+      };
+      $('#delGroup').onclick = ()=>{
+        const subCount = db.subgroups.filter(s=>s.groupId===g.id).length;
+        const entryCount = db.entries.filter(e=>e.groupId===g.id).length;
+        if(subCount>0 || entryCount>0){
+          const parts = [];
+          if(subCount) parts.push(`${subCount} subgroup${subCount===1?'':'s'}`);
+          if(entryCount) parts.push(`${entryCount} address entr${entryCount===1?'y':'ies'}`);
+          showToast(`Can't delete — "${g.name}" still has ${parts.join(' and ')}. Move or delete those first.`);
+          return;
+        }
+        confirmModal(`Delete "${g.name}"?`, ()=>{
+          db.groups = db.groups.filter(x=>x.id!==g.id);
+          save(); state.editingId=null; showToast('Group deleted'); render();
+        });
+      };
+      $('#cancelG').onclick = ()=>{ state.editingId=null; render(); };
+      return;
+    }
+    screen.innerHTML = `<div class="section-label">Modify Groups</div><div id="mgList"></div>`;
+    const list = db.groups.map(g=>`
+      <div class="card-item">
+        <span class="name">${g.name}</span>
+        <span class="count-pill">${subgroupsFor(g.id).length} subgroup(s)</span>
+        <div class="card-actions"><button class="btn btn-outline btn-small" data-edit="${g.id}">Edit</button></div>
+      </div>`).join('') || `<div class="empty"><div class="big">No groups yet</div>Create one from the Create tab.</div>`;
+    $('#mgList').innerHTML = list;
+    screen.querySelectorAll('[data-edit]').forEach(b=> b.onclick = ()=>{ state.editingId=b.dataset.edit; renderModifyGroup(); });
+  }
+
+  function renderModifySubgroup(){
+    if(state.editingId){
+      const s = db.subgroups.find(x=>x.id===state.editingId);
+      if(!s){ state.editingId=null; return renderModifySubgroup(); }
+      screen.innerHTML = `
+        <div class="section-label">Edit Subgroup</div>
+        <label>Parent group</label>
+        <select id="esGroup">${selectOptions(db.groups,'id',g=>g.name,'Select a group')}</select>
+        <label>Subgroup name</label>
+        <input type="text" id="esName" value="${s.name}">
+        <button class="btn btn-primary" id="updSub">Update Subgroup</button>
+        <button class="btn btn-danger" style="width:100%;margin-top:10px;" id="delSub">Delete Subgroup</button>
+        <button class="btn btn-outline" style="width:100%;margin-top:10px;" id="cancelS">Cancel</button>
+      `;
+      $('#esGroup').value = s.groupId;
+      $('#updSub').onclick = ()=>{
+        s.groupId = $('#esGroup').value;
+        s.name = $('#esName').value.trim() || s.name;
+        save(); state.editingId=null; showToast('Subgroup updated'); render();
+      };
+      $('#delSub').onclick = ()=>{
+        const entryCount = db.entries.filter(e=>e.subgroupId===s.id).length;
+        if(entryCount>0){
+          showToast(`Can't delete — "${s.name}" still has ${entryCount} address entr${entryCount===1?'y':'ies'}. Move or delete those first.`);
+          return;
+        }
+        confirmModal(`Delete "${s.name}"?`, ()=>{
+          db.subgroups = db.subgroups.filter(x=>x.id!==s.id);
+          save(); state.editingId=null; showToast('Subgroup deleted'); render();
+        });
+      };
+      $('#cancelS').onclick = ()=>{ state.editingId=null; render(); };
+      return;
+    }
+    screen.innerHTML = `<div class="section-label">Modify Subgroups</div><div id="msList"></div>`;
+    const list = db.subgroups.map(s=>`
+      <div class="card-item">
+        <span class="name">${s.name}</span>
+        <span class="tag">${groupName(s.groupId)}</span>
+        <div class="card-actions"><button class="btn btn-outline btn-small" data-edit="${s.id}">Edit</button></div>
+      </div>`).join('') || `<div class="empty"><div class="big">No subgroups yet</div>Create one from the Create tab.</div>`;
+    $('#msList').innerHTML = list;
+    screen.querySelectorAll('[data-edit]').forEach(b=> b.onclick = ()=>{ state.editingId=b.dataset.edit; renderModifySubgroup(); });
+  }
+
+  function addressFormHtml(e){
+    return `
+      <label>Group</label>
+      <select id="eGroup">${selectOptions(db.groups,'id',g=>g.name,'Select a group')}</select>
+      <label>Subgroup</label>
+      <select id="eSub"></select>
+      <label>Name</label>
+      <input type="text" id="eName" value="${e.name}">
+      <label>Company Name</label>
+      <input type="text" id="eCompany" value="${e.company||''}" placeholder="e.g. ABC Traders (optional)">
+      <label>Note (relation)</label>
+      <input type="text" id="eNote" value="${e.note||''}" placeholder="e.g. Cousin, Neighbour, College friend">
+      <label>Related to (optional)</label>
+      <select id="eRelated"></select>
+      <label>Address</label>
+      <textarea id="eAddr" class="addr-field" rows="7">${e.address||''}</textarea>
+      <div class="row2">
+        <div><label>Contact No 1</label><input type="tel" id="eC1" value="${e.contact1||''}"></div>
+        <div><label>Contact No 2</label><input type="tel" id="eC2" value="${e.contact2||''}"></div>
+      </div>
+      <label>WhatsApp No</label>
+      <input type="tel" id="eWa" value="${e.whatsapp||''}">
+      <label>Email ID</label>
+      <input type="email" id="eEmail" value="${e.email||''}">
+      <label>Birthday (DD/MM/YYYY)</label>
+      <input type="text" id="eBday" value="${e.birthday||''}" placeholder="e.g. 05/08/1990">
+      <label>Wedding Anniversary (DD/MM/YYYY)</label>
+      <input type="text" id="eAnniv" value="${e.anniversary||''}" placeholder="e.g. 21/12/2015">
+      <button class="btn btn-primary" id="updAddr">Update Entry</button>
+      <button class="btn btn-danger" style="width:100%;margin-top:10px;" id="delAddr">Delete Entry</button>
+      <button class="btn btn-outline" style="width:100%;margin-top:10px;" id="cancelA">Cancel</button>
+    `;
+  }
+
+  function renderModifyAddress(){
+    if(state.editingId){
+      if($('#fGroup')){
+        state.modifyFilterGroup = $('#fGroup').value;
+        state.modifyFilterSub = $('#fSub').value;
+      }
+      const e = db.entries.find(x=>x.id===state.editingId);
+      if(!e){ state.editingId=null; return renderModifyAddress(); }
+      screen.innerHTML = `<div class="section-label">Edit Entry</div>` + addressFormHtml(e);
+      $('#eGroup').value = e.groupId;
+      function refreshSub(preserve){
+        const gid = $('#eGroup').value;
+        $('#eSub').innerHTML = selectOptions(subgroupsFor(gid),'id',s=>s.name,'Select a subgroup');
+        if(preserve) $('#eSub').value = e.subgroupId;
+        refreshRelated();
+      }
+      function refreshRelated(){
+        const sid = $('#eSub').value;
+        const inScope = sid ? db.entries.filter(en=>en.subgroupId===sid && en.id!==e.id) : [];
+        $('#eRelated').innerHTML = '<option value="">— None —</option>' + inScope.map(en=>`<option value="${en.id}">${en.name}</option>`).join('');
+        $('#eRelated').value = e.relatedTo || '';
+      }
+      refreshSub(true);
+      $('#eGroup').onchange = ()=>refreshSub(false);
+      $('#eSub').addEventListener('change', refreshRelated);
+      $('#updAddr').onclick = ()=>{
+        const bdayRaw = $('#eBday').value.trim(), annivRaw = $('#eAnniv').value.trim();
+        if(bdayRaw && !parseDMY(bdayRaw)){ showToast('Birthday must be DD/MM/YYYY, e.g. 05/08/1990'); return; }
+        if(annivRaw && !parseDMY(annivRaw)){ showToast('Anniversary must be DD/MM/YYYY, e.g. 21/12/2015'); return; }
+        const relatedVal = $('#eRelated').value;
+        if(relatedVal===e.id){ showToast('An entry cannot be related to itself'); return; }
+        const addressText = $('#eAddr').value.trim();
+        e.groupId = $('#eGroup').value;
+        e.subgroupId = $('#eSub').value;
+        e.name = $('#eName').value.trim() || e.name;
+        e.note = $('#eNote').value.trim();
+        e.company = $('#eCompany').value.trim();
+        e.relatedTo = relatedVal || '';
+        e.address = addressText;
+        e.contact1 = $('#eC1').value.trim();
+        e.contact2 = $('#eC2').value.trim();
+        e.whatsapp = $('#eWa').value.trim();
+        e.email = $('#eEmail').value.trim();
+        e.birthday = bdayRaw;
+        e.anniversary = annivRaw;
+        save(); state.editingId=null; showToast('Entry updated'); render();
+      };
+      $('#delAddr').onclick = ()=>{
+        const childCount = db.entries.filter(x=>x.relatedTo===e.id).length;
+        if(childCount>0){
+          showToast(`Can't delete — ${childCount} entr${childCount===1?'y is':'ies are'} linked as "Related to" this one. Unlink or delete those first.`);
+          return;
+        }
+        confirmModal(`Delete entry for "${e.name}"?`, ()=>{
+          db.entries = db.entries.filter(x=>x.id!==e.id);
+          save(); state.editingId=null; showToast('Entry deleted'); render();
+        });
+      };
+      $('#cancelA').onclick = ()=>{ state.editingId=null; render(); };
+      return;
+    }
+    screen.innerHTML = `
+      <div class="section-label">Modify Address Entries</div>
+      <div class="filterbar">
+        <select id="fGroup">${selectOptions(db.groups,'id',g=>g.name,'All groups')}</select>
+        <select id="fSub"><option value="">All subgroups</option></select>
+      </div>
+      <div id="maList"></div>
+    `;
+    function refreshSubFilter(preserveSub){
+      const gid = $('#fGroup').value;
+      const list = gid ? subgroupsFor(gid) : db.subgroups;
+      $('#fSub').innerHTML = selectOptions(list,'id',s=>s.name,'All subgroups');
+      if(preserveSub) $('#fSub').value = preserveSub;
+    }
+    function refresh(){
+      const gid = $('#fGroup').value, sid = $('#fSub').value;
+      const list = entriesFor(gid, sid);
+      const ordered = buildRelationOrder(list);
+      $('#maList').innerHTML = ordered.map(({entry:e, depth})=>`
+        <div class="card-item" style="${depth>0 ? `margin-left:${depth*20}px;border-left-color:var(--teal);` : ''}">
+          ${depth>0 ? `<span class="count-pill">↳ related to ${(db.entries.find(x=>x.id===e.relatedTo)||{}).name||''}</span><br>` : ''}
+          <span class="name">${e.name}</span>
+          ${e.company ? `<span class="tag">${e.company}</span>` : ''}
+          <span class="tag">${groupName(e.groupId)}</span>
+          <span class="tag">${subgroupName(e.subgroupId)}</span>
+          ${e.note ? `<div class="note-line">${e.note}</div>` : ''}
+          <div class="contact-line">${e.contact1||''}</div>
+          <div class="card-actions"><button class="btn btn-outline btn-small" data-edit="${e.id}">Edit</button></div>
+        </div>`).join('') || `<div class="empty"><div class="big">No entries found</div>Try a different filter or create one.</div>`;
+      screen.querySelectorAll('[data-edit]').forEach(b=> b.onclick = ()=>{ state.editingId=b.dataset.edit; renderModifyAddress(); });
+    }
+    if(state.modifyFilterGroup) $('#fGroup').value = state.modifyFilterGroup;
+    refreshSubFilter(state.modifyFilterSub);
+    $('#fGroup').onchange = ()=>{ refreshSubFilter(); refresh(); };
+    $('#fSub').onchange = refresh;
+    refresh();
+  }
+
+  // ---------------- VIEW / PDF ----------------
+  function renderViewGroup(){
+    screen.innerHTML = `
+      <div class="section-label">All Groups</div>
+      <div id="vgList"></div>
+      <button class="btn btn-primary" id="pdfGroups">View / Print Group List PDF</button>
+    `;
+    $('#vgList').innerHTML = db.groups.map(g=>`
+      <div class="card-item"><span class="name">${g.name}</span>
+      <span class="count-pill">${subgroupsFor(g.id).length} subgroup(s) · ${entriesFor(g.id).length} entr${entriesFor(g.id).length===1?'y':'ies'}</span></div>
+    `).join('') || `<div class="empty">No groups yet.</div>`;
+    $('#pdfGroups').onclick = ()=> exportGroupsPdf();
+  }
+
+  function renderViewSubgroup(){
+    screen.innerHTML = `
+      <div class="section-label">Subgroups</div>
+      <div class="filterbar"><select id="vsGroup">${selectOptions(db.groups,'id',g=>g.name,'All groups')}</select></div>
+      <div id="vsList"></div>
+      <button class="btn btn-primary" id="pdfSub">View / Print Subgroup List PDF</button>
+    `;
+    function refresh(){
+      const gid = $('#vsGroup').value;
+      const list = gid ? subgroupsFor(gid) : db.subgroups;
+      $('#vsList').innerHTML = list.map(s=>`
+        <div class="card-item"><span class="name">${s.name}</span><span class="tag">${groupName(s.groupId)}</span>
+        <span class="count-pill">${entriesFor(s.groupId,s.id).length} entries</span></div>
+      `).join('') || `<div class="empty">No subgroups found.</div>`;
+    }
+    $('#vsGroup').onchange = refresh;
+    refresh();
+    $('#pdfSub').onclick = ()=> exportSubgroupsPdf($('#vsGroup').value);
+  }
+
+  function renderViewAddress(){
+    let revealed = false;
+    screen.innerHTML = `
+      <div class="section-label">Address Book</div>
+      <div class="filterbar">
+        <select id="pfGroup">${selectOptions(db.groups,'id',g=>g.name,'All groups')}</select>
+        <select id="pfSub"><option value="">All subgroups</option></select>
+      </div>
+      <div class="selectall-row" id="selectAllRow" style="display:none;">
+        <label><input type="checkbox" id="selectAllChk"> Select all shown</label>
+        <span class="count-pill" id="selCount"></span>
+      </div>
+      <div id="pvList"><div class="empty"><div class="big">Choose Group &amp; Subgroup</div>Select both above to view matching entries here.</div></div>
+      <button class="btn btn-primary" id="pdfAddr" style="display:none;">View / Print Selected PDF</button>
+      <button class="btn btn-outline" id="pdfAll" style="width:100%;margin-top:10px;">View / Print ALL Entries PDF</button>
+      <button class="btn btn-outline" id="pdfAllGS" style="width:100%;margin-top:10px;">View / Print Grouped PDF</button>
+    `;
+    function currentFiltered(){
+      return entriesFor($('#pfGroup').value, $('#pfSub').value);
+    }
+    function updateSelectAllState(list){
+      $('#selectAllChk').checked = list.length>0 && list.every(e=>state.selectedIds.has(e.id));
+    }
+    function updateCount(){
+      $('#selCount').textContent = state.selectedIds.size ? `${state.selectedIds.size} selected (across any group/subgroup)` : '';
+    }
+    function cardHtml(e, depth){
+      depth = depth || 0;
+      const parent = e.relatedTo ? db.entries.find(x=>x.id===e.relatedTo) : null;
+      return `
+        <div class="card-item" style="${depth>0 ? `margin-left:${depth*20}px;border-left-color:var(--teal);` : ''}">
+          ${parent ? `<span class="count-pill">↳ related to ${parent.name}</span><br>` : ''}
+          <label>
+            <input type="checkbox" class="entryChk" data-id="${e.id}" ${state.selectedIds.has(e.id)?'checked':''}>
+            <span class="card-body">
+              <span class="name">${e.name}</span>
+              ${e.company ? `<span class="tag">${e.company}</span>` : ''}
+              <span class="tag">${groupName(e.groupId)}</span>
+              <span class="tag">${subgroupName(e.subgroupId)}</span>
+              ${e.note ? `<div class="note-line">${e.note}</div>` : ''}
+              <div class="addr addr-box">${(e.address||'').replace(/</g,'&lt;')}</div>
+              <div class="contact-line">📞 ${e.contact1||'—'} ${e.contact2? ' / '+e.contact2:''}</div>
+              <div class="contact-line">💬 ${e.whatsapp||'—'}</div>
+              <div class="contact-line">✉ ${e.email||'—'}</div>
+            </span>
+          </label>
+        </div>`;
+    }
+    function refresh(){
+      const gid = $('#pfGroup').value, sid = $('#pfSub').value;
+      const list = currentFiltered();
+      if(sid){
+        const ordered = buildRelationOrder(list);
+        $('#pvList').innerHTML = ordered.map(({entry,depth})=>cardHtml(entry,depth)).join('') || `<div class="empty"><div class="big">No entries found</div>Try a different filter.</div>`;
+      } else {
+        const sections = buildGroupSubgroupSections(list);
+        $('#pvList').innerHTML = sections.map(sec => `
+          <div class="section-heading">${groupName(sec.groupId)} , ${subgroupName(sec.subgroupId)}</div>
+          ${buildRelationOrder(sec.entries).map(({entry,depth})=>cardHtml(entry,depth)).join('')}
+        `).join('') || `<div class="empty"><div class="big">No entries found</div>Try a different filter.</div>`;
+      }
+      screen.querySelectorAll('.entryChk').forEach(chk=>{
+        chk.onchange = ()=>{
+          if(chk.checked) state.selectedIds.add(chk.dataset.id);
+          else state.selectedIds.delete(chk.dataset.id);
+          updateSelectAllState(list);
+          updateCount();
+        };
+      });
+      updateSelectAllState(list);
+      updateCount();
+    }
+    function reveal(){
+      if(revealed) return;
+      revealed = true;
+      $('#selectAllRow').style.display = 'flex';
+      $('#pdfAddr').style.display = 'inline-flex';
+    }
+    function refreshSubFilter(){
+      const gid = $('#pfGroup').value;
+      const list = gid ? subgroupsFor(gid) : db.subgroups;
+      $('#pfSub').innerHTML = selectOptions(list,'id',s=>s.name,'All subgroups');
+    }
+    refreshSubFilter();
+    $('#pfGroup').onchange = ()=>{ refreshSubFilter(); reveal(); refresh(); };
+    $('#pfSub').onchange = ()=>{ reveal(); refresh(); };
+    $('#selectAllChk').onchange = ()=>{
+      const list = currentFiltered();
+      if($('#selectAllChk').checked){ list.forEach(e=>state.selectedIds.add(e.id)); }
+      else{ list.forEach(e=>state.selectedIds.delete(e.id)); }
+      refresh();
+    };
+    $('#pdfAddr').onclick = ()=>{
+      let list, note, filename;
+      if(state.selectedIds.size>0){
+        list = db.entries.filter(e=>state.selectedIds.has(e.id));
+        note = 'Selected Entries';
+        filename = `Selected-Entries-${todayStr()}.pdf`;
+      } else {
+        const gid = $('#pfGroup').value, sid = $('#pfSub').value;
+        list = entriesFor(gid, sid);
+        note = [gid?groupName(gid):null, sid?subgroupName(sid):null].filter(Boolean).join(' / ') || null;
+        filename = gid ? `${slug(groupName(gid))}${sid?'-'+slug(subgroupName(sid)):'-All-Subgroups'}.pdf` : 'Digital-Address-Book-Filtered.pdf';
+      }
+      exportAddressPdf(list, note, false, filename);
+    };
+
+    $('#pdfAll').onclick = ()=>{
+      const sorted = [...db.entries].sort((a,b)=>
+        groupName(a.groupId).localeCompare(groupName(b.groupId)) ||
+        subgroupName(a.subgroupId).localeCompare(subgroupName(b.subgroupId)) ||
+        (a.name||'').localeCompare(b.name||'')
+      );
+      exportAddressPdf(sorted, 'All Entries', false, 'Digital-Address-Book-All.pdf');
+    };
+    $('#pdfAllGS').onclick = ()=>{
+      const gid = $('#pfGroup').value, sid = $('#pfSub').value;
+      const flat = entriesFor(gid, sid);
+      const pairs = buildGroupSubgroupSections(flat);
+      let filename;
+      if(gid && sid) filename = `${slug(groupName(gid))}-${slug(subgroupName(sid))}.pdf`;
+      else if(gid) filename = `${slug(groupName(gid))}-All-Subgroups.pdf`;
+      else filename = 'Digital-Address-Book-Grouped-All.pdf';
+      exportAddressPdfGrouped(pairs, filename);
+    };
+  }
+
+  // ---------------- VIEW / PDF: BIRTHDAYS & ANNIVERSARIES ----------------
+  const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+
+  function renderViewBirthdays(){
+    screen.innerHTML = `
+      <div class="section-label">Birthdays &amp; Anniversaries</div>
+      <label>Show</label>
+      <select id="bdType">
+        <option value="both">Birthday &amp; Anniversary</option>
+        <option value="birthday">Birthday only</option>
+        <option value="anniversary">Anniversary only</option>
+      </select>
+      <label>Month</label>
+      <select id="bdMonth">
+        <option value="">Select a month</option>
+        ${MONTH_NAMES.map((m,i)=>`<option value="${i+1}">${m}</option>`).join('')}
+      </select>
+      <label>Year (optional — leave blank to match every year)</label>
+      <input type="text" id="bdYear" placeholder="e.g. 1990">
+      <div class="filterbar">
+        <select id="bdGroup">${selectOptions(db.groups,'id',g=>g.name,'All groups')}</select>
+        <select id="bdSub"><option value="">All subgroups</option></select>
+      </div>
+      <div id="bdList"><div class="empty"><div class="big">Choose a Month</div>Select a month above to see matching birthdays and anniversaries.</div></div>
+      <button class="btn btn-primary" id="bdExport" style="display:none;">View / Print List PDF</button>
+    `;
+
+    function updateBdSubOptions(){
+      const gid = $('#bdGroup').value;
+      const list = gid ? subgroupsFor(gid) : db.subgroups;
+      $('#bdSub').innerHTML = selectOptions(list, 'id', s=>s.name, 'All subgroups');
+    }
+
+    updateBdSubOptions();
+
+    $('#bdGroup').addEventListener('change', ()=>{
+      updateBdSubOptions();
+      refresh();
+    });
+
+    function computeMatches(){
+      const type = $('#bdType').value;
+      const month = parseInt($('#bdMonth').value, 10);
+      const yearStr = $('#bdYear').value.trim();
+      const year = yearStr ? parseInt(yearStr,10) : null;
+      const gid = $('#bdGroup').value, sid = $('#bdSub').value;
+      if(!month) return null;
+
+      const rows = [];
+      entriesFor(gid, sid).forEach(e=>{
+        [['birthday','Birthday'], ['anniversary','Anniversary']].forEach(([field, label])=>{
+          if(type!=='both' && type!==field) return;
+          const parsed = parseDMY(e[field]);
+          if(!parsed) return;
+          if(parsed.month !== month) return;
+          if(year && parsed.year !== year) return;
+          rows.push({ name: e.name, type: label, day: parsed.day, month: parsed.month, year: parsed.year,
+                      groupId: e.groupId, subgroupId: e.subgroupId,
+                      dateStr: `${String(parsed.day).padStart(2,'0')}/${String(parsed.month).padStart(2,'0')}/${parsed.year}` });
+        });
+      });
+      rows.sort((a,b)=> a.day - b.day || a.name.localeCompare(b.name));
+      return rows;
+    }
+
+    function refresh(){
+      const rows = computeMatches();
+      if(rows === null){
+        $('#bdList').innerHTML = `<div class="empty"><div class="big">Choose a Month</div>Select a month above to see matching birthdays and anniversaries.</div>`;
+        $('#bdExport').style.display = 'none';
+        return;
+      }
+      $('#bdExport').style.display = 'inline-flex';
+      $('#bdList').innerHTML = rows.map(r=>`
+        <div class="card-item">
+          <span class="name">${r.name}</span>
+          <span class="tag">${r.type}</span>
+          <span class="tag">${groupName(r.groupId)}</span>
+          <span class="tag">${subgroupName(r.subgroupId)}</span>
+          <div class="contact-line">📅 ${r.dateStr}</div>
+        </div>`).join('') || `<div class="empty"><div class="big">No matches</div>No birthdays or anniversaries found for this Month/Year/Group/Subgroup.</div>`;
+    }
+
+    ['bdType','bdMonth','bdYear','bdSub'].forEach(id=>{
+      $('#'+id).addEventListener('input', refresh);
+      $('#'+id).addEventListener('change', refresh);
+    });
+    refresh();
+
+    $('#bdExport').onclick = ()=>{
+      const rows = computeMatches();
+      if(!rows){ showToast('Select a month first'); return; }
+      const month = $('#bdMonth').value;
+      const monthName = MONTH_NAMES[parseInt(month,10)-1];
+      const yearStr = $('#bdYear').value.trim();
+      const gid = $('#bdGroup').value, sid = $('#bdSub').value;
+      let titleParts = [monthName];
+      if(yearStr) titleParts.push(yearStr);
+      if(gid) titleParts.push(groupName(gid));
+      if(sid) titleParts.push(subgroupName(sid));
+      const filenameParts = ['Birthdays-Anniversaries', ...titleParts.map(slug)];
+      exportBirthdaysPdf(rows, titleParts.join(' — '), filenameParts.join('-') + '.pdf');
+    };
+  }
+
+  // ---------------- VIEW / PDF: SEARCH (Name or Company) ----------------
+  const SEARCH_FIELD_DEFS = [
+    ['company','Company Name'], ['group','Group'], ['subgroup','Subgroup'], ['note','Note'],
+    ['address','Address'], ['contact1','Contact No1'], ['contact2','Contact No2'],
+    ['whatsapp','WhatsApp No'], ['email','Email'], ['birthday','Birthday'], ['anniversary','Anniversary']
+  ];
+
+  function renderViewSearch(){
+    if(!state.searchFields){
+      state.searchFields = { company:true, group:false, subgroup:false, note:false, address:true,
+        contact1:true, contact2:false, whatsapp:false, email:false, birthday:false, anniversary:false };
+    }
+    screen.innerHTML = `
+      <div class="section-label">Search</div>
+      <label>Search by Name or Company Name</label>
+      <input type="text" id="searchQ" placeholder="Type a name or company...">
+      <div class="selectall-row" style="margin-top:14px;">
+        <label><input type="checkbox" id="searchSelectAll"> Select all shown</label>
+        <span class="count-pill" id="searchCount"></span>
+      </div>
+      <div id="searchList"><div class="empty"><div class="big">Start typing</div>Search by Name or Company Name to find entries.</div></div>
+
+      <div class="section-label" style="margin-top:22px;">Fields to Include When Copying</div>
+      <div class="field-check-grid" id="fieldChecks"></div>
+
+      <button class="btn btn-primary" id="copyWa" style="margin-top:16px;">Copy for WhatsApp</button>
+      <button class="btn btn-outline" id="shareWa" style="width:100%;margin-top:10px;">Share to WhatsApp</button>
+    `;
+
+    $('#fieldChecks').innerHTML = SEARCH_FIELD_DEFS.map(([key,label])=>`
+      <label class="field-check"><input type="checkbox" data-field="${key}" ${state.searchFields[key]?'checked':''}> ${label}</label>
+    `).join('');
+    $('#fieldChecks').querySelectorAll('[data-field]').forEach(chk=>{
+      chk.onchange = ()=>{ state.searchFields[chk.dataset.field] = chk.checked; };
+    });
+
+    function currentMatches(){
+      const q = $('#searchQ').value.trim().toLowerCase();
+      if(!q) return [];
+      return db.entries.filter(e=>
+        (e.name||'').toLowerCase().includes(q) || (e.company||'').toLowerCase().includes(q)
+      );
+    }
+    function updateSelectAllState(list){
+      $('#searchSelectAll').checked = list.length>0 && list.every(e=>state.selectedIds.has(e.id));
+    }
+    function updateCount(){
+      $('#searchCount').textContent = state.selectedIds.size ? `${state.selectedIds.size} selected` : '';
+    }
+    function refresh(){
+      const q = $('#searchQ').value.trim();
+      if(!q){
+        $('#searchList').innerHTML = `<div class="empty"><div class="big">Start typing</div>Search by Name or Company Name to find entries.</div>`;
+        updateCount();
+        return;
+      }
+      const list = currentMatches();
+      $('#searchList').innerHTML = list.map(e=>`
+        <div class="card-item">
+          <label>
+            <input type="checkbox" class="entryChk" data-id="${e.id}" ${state.selectedIds.has(e.id)?'checked':''}>
+            <span class="card-body">
+              <span class="name">${e.name}</span>
+              ${e.company ? `<span class="tag">${e.company}</span>` : ''}
+              <span class="tag">${groupName(e.groupId)}</span>
+              <span class="tag">${subgroupName(e.subgroupId)}</span>
+            </span>
+          </label>
+        </div>`).join('') || `<div class="empty"><div class="big">No matches</div>Try a different name or company.</div>`;
+      screen.querySelectorAll('.entryChk').forEach(chk=>{
+        chk.onchange = ()=>{
+          if(chk.checked) state.selectedIds.add(chk.dataset.id);
+          else state.selectedIds.delete(chk.dataset.id);
+          updateSelectAllState(list);
+          updateCount();
+        };
+      });
+      updateSelectAllState(list);
+      updateCount();
+    }
+
+    $('#searchQ').addEventListener('input', refresh);
+    $('#searchSelectAll').onchange = ()=>{
+      const list = currentMatches();
+      if($('#searchSelectAll').checked){ list.forEach(e=>state.selectedIds.add(e.id)); }
+      else{ list.forEach(e=>state.selectedIds.delete(e.id)); }
+      refresh();
+    };
+    refresh();
+
+    function buildText(){
+      const selected = db.entries.filter(e=>state.selectedIds.has(e.id));
+      if(!selected.length) return '';
+      return selected.map(e=>{
+        const lines = [e.name];
+        if(state.searchFields.company && e.company) lines.push(e.company);
+        if(state.searchFields.note && e.note) lines.push(e.note);
+        if(state.searchFields.group) lines.push('Group: ' + groupName(e.groupId));
+        if(state.searchFields.subgroup) lines.push('Subgroup: ' + subgroupName(e.subgroupId));
+        if(state.searchFields.address && e.address) lines.push(e.address);
+        if(state.searchFields.contact1 && e.contact1) lines.push('Contact 1: ' + e.contact1);
+        if(state.searchFields.contact2 && e.contact2) lines.push('Contact 2: ' + e.contact2);
+        if(state.searchFields.whatsapp && e.whatsapp) lines.push('WhatsApp: ' + e.whatsapp);
+        if(state.searchFields.email && e.email) lines.push('Email: ' + e.email);
+        if(state.searchFields.birthday && e.birthday) lines.push('Birthday: ' + e.birthday);
+        if(state.searchFields.anniversary && e.anniversary) lines.push('Anniversary: ' + e.anniversary);
+        return lines.join('\n');
+      }).join('\n\n');
+    }
+
+    $('#copyWa').onclick = async ()=>{
+      const text = buildText();
+      if(!text){ showToast('Select at least one entry first'); return; }
+      try{
+        await navigator.clipboard.writeText(text);
+        showToast('Copied — paste it into WhatsApp');
+      }catch(err){
+        showToast('Could not copy automatically on this device — select and copy manually');
+      }
+    };
+    $('#shareWa').onclick = ()=>{
+      const text = buildText();
+      if(!text){ showToast('Select at least one entry first'); return; }
+      window.open('https://wa.me/?text=' + encodeURIComponent(text), '_blank');
+    };
+  }
+
+  function buildRelationOrder(list){
+    const byId = new Map(list.map(e=>[e.id, e]));
+    const childrenMap = new Map();
+    const roots = [];
+    list.forEach(e=>{
+      if(e.relatedTo && byId.has(e.relatedTo) && e.relatedTo!==e.id){
+        if(!childrenMap.has(e.relatedTo)) childrenMap.set(e.relatedTo, []);
+        childrenMap.get(e.relatedTo).push(e);
+      } else {
+        roots.push(e);
+      }
+    });
+    const ordered = [];
+    function walk(e, depth){
+      ordered.push({ entry: e, depth });
+      (childrenMap.get(e.id)||[]).forEach(c=>walk(c, depth+1));
+    }
+    roots.forEach(r=>walk(r, 0));
+    return ordered;
+  }
+
+  function buildGroupSubgroupSections(flat){
+    const map = new Map();
+    flat.forEach(e=>{
+      const key = e.groupId + '|' + e.subgroupId;
+      if(!map.has(key)) map.set(key, { groupId: e.groupId, subgroupId: e.subgroupId, entries: [] });
+      map.get(key).entries.push(e);
+    });
+    return [...map.values()].sort((a,b)=>
+      groupName(a.groupId).localeCompare(groupName(b.groupId)) ||
+      subgroupName(a.subgroupId).localeCompare(subgroupName(b.subgroupId))
+    );
+  }
+
+  // ---------------- PDF EXPORT ----------------
+  function slug(text){
+    return (text||'').toString().trim().replace(/[^A-Za-z0-9]+/g,'-').replace(/^-+|-+$/g,'') || 'File';
+  }
+  function todayStr(){
+    return new Date().toISOString().slice(0,10);
+  }
+  function newDoc(title){
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({unit:'pt', format:'a4'});
+    doc.setFont('helvetica','bold'); doc.setFontSize(16);
+    doc.text(title, 40, 50);
+    doc.setDrawColor(180); doc.line(40,58,555,58);
+    return doc;
+  }
+  function footer(doc, y){
+    doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(140);
+    doc.text('Generated by Digital Address Book App', 40, 812);
+  }
+
+  function exportGroupsPdf(){
+    const doc = newDoc('Digital Address Book — Groups');
+    let y = 80;
+    doc.setFontSize(11); doc.setTextColor(20);
+    db.groups.forEach(g=>{
+      if(y>760){ doc.addPage(); y=50; }
+      doc.setFont('helvetica','bold'); doc.text(g.name, 40, y);
+      doc.setFont('helvetica','normal');
+      doc.text(`${subgroupsFor(g.id).length} subgroup(s), ${entriesFor(g.id).length} entries`, 300, y);
+      y += 20;
+    });
+    if(!db.groups.length){ doc.text('No groups yet.',40,y); }
+    footer(doc,y);
+
+    window.open(doc.output('bloburl'), '_blank');
+    showToast('PDF opened in preview window');
+  }
+
+  function exportSubgroupsPdf(gid){
+    const list = gid ? subgroupsFor(gid) : db.subgroups;
+    const doc = newDoc('Digital Address Book — Subgroups' + (gid? ' ('+groupName(gid)+')':''));
+    let y = 80;
+    doc.setFontSize(11);
+    list.forEach(s=>{
+      if(y>760){ doc.addPage(); y=50; }
+      doc.setFont('helvetica','bold'); doc.text(s.name, 40, y);
+      doc.setFont('helvetica','normal');
+      doc.text(groupName(s.groupId), 300, y);
+      y += 20;
+    });
+    if(!list.length){ doc.text('No subgroups found.',40,y); }
+    footer(doc,y);
+
+    window.open(doc.output('bloburl'), '_blank');
+    showToast('PDF opened in preview window');
+  }
+
+  function exportBirthdaysPdf(rows, titleSuffix, filename){
+    filename = filename || 'birthdays-anniversaries.pdf';
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({unit:'pt', format:'a4'});
+    const marginX = 40;
+    let y = 46;
+
+    doc.setFont('helvetica','bold'); doc.setFontSize(15); doc.setTextColor(20);
+    doc.text('Birthdays & Anniversaries' + (titleSuffix ? ' — ' + titleSuffix : ''), marginX, y);
+    y += 10;
+    doc.setDrawColor(180); doc.line(marginX, y, 555, y);
+    y += 24;
+
+    doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.setTextColor(90);
+    doc.text('Name', marginX, y);
+    doc.text('Type', 300, y);
+    doc.text('Date', 400, y);
+    y += 8;
+    doc.setDrawColor(220); doc.line(marginX, y, 555, y);
+    y += 16;
+
+    if(!rows.length){
+      doc.setFont('helvetica','normal'); doc.setFontSize(11); doc.setTextColor(20);
+      doc.text('No matching birthdays or anniversaries.', marginX, y);
+      window.open(doc.output('bloburl'), '_blank');
+      showToast('PDF opened in preview window');
+      return;
+    }
+
+    doc.setFont('helvetica','normal'); doc.setFontSize(11); doc.setTextColor(20);
+    rows.forEach(r=>{
+      if(y > 800){
+        doc.addPage();
+        y = 50;
+        doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.setTextColor(90);
+        doc.text('Name', marginX, y); doc.text('Type', 300, y); doc.text('Date', 400, y);
+        y += 8; doc.setDrawColor(220); doc.line(marginX, y, 555, y); y += 16;
+        doc.setFont('helvetica','normal'); doc.setFontSize(11); doc.setTextColor(20);
+      }
+      doc.text(r.name || '', marginX, y, { maxWidth: 250 });
+      doc.text(r.type, 300, y);
+      doc.text(r.dateStr, 400, y);
+      y += 20;
+    });
+
+    window.open(doc.output('bloburl'), '_blank');
+    showToast('PDF opened in preview window');
+  }
+
+  function exportAddressPdfGrouped(pairs, filename){
+    filename = filename || 'digital-address-book-grouped.pdf';
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({unit:'pt', format:'a4'});
+
+    if(!pairs.length){
+      doc.setFont('helvetica','normal'); doc.setFontSize(11); doc.setTextColor(20);
+      doc.text('No entries found.', 40, 40);
+      window.open(doc.output('bloburl'), '_blank');
+      showToast('PDF opened in preview window');
+      return;
+    }
+
+    const pageWidth = 595.28;
+    const marginX = 40, bottomY = 825;
+    const columns = 2, rowsPerPage = 4;
+    const gutterX = 14, gutterY = 14;
+    const colWidth = (pageWidth - marginX*2 - gutterX*(columns-1)) / columns;
+    const perPage = columns * rowsPerPage;
+
+    function drawHeading(pair){
+      doc.setFont('helvetica','bold'); doc.setFontSize(15); doc.setTextColor(20);
+      doc.text(`${groupName(pair.groupId)} , ${subgroupName(pair.subgroupId)}`, marginX, 38);
+      doc.setDrawColor(180);
+      doc.line(marginX, 46, pageWidth - marginX, 46);
+    }
+
+    const gridTopY = 64;
+    const rowHeight = (bottomY - gridTopY - gutterY*(rowsPerPage-1)) / rowsPerPage;
+
+    pairs.forEach((pair, pIdx)=>{
+      if(pIdx>0) doc.addPage();
+      drawHeading(pair);
+
+      pair.entries.forEach((e, i)=>{
+        if(i>0 && i % perPage === 0){ doc.addPage(); drawHeading(pair); }
+        const j = i % perPage;
+        const col = Math.floor(j / rowsPerPage);
+        const row = j % rowsPerPage;
+        const x = marginX + col*(colWidth+gutterX);
+        const y = gridTopY + row*(rowHeight+gutterY);
+
+        doc.setDrawColor(205);
+        doc.roundedRect(x, y, colWidth, rowHeight, 4, 4);
+
+        const textMaxWidth = colWidth - 24;
+        const padX = x + 12;
+        let cy = y + 24;
+
+        doc.setFont('helvetica','bold'); doc.setFontSize(16); doc.setTextColor(20);
+        doc.text(e.name || '', padX, cy, { maxWidth: textMaxWidth });
+        cy += 22;
+
+        if(e.company){
+          doc.setFont('helvetica','normal'); doc.setFontSize(12); doc.setTextColor(60);
+          doc.text(e.company, padX, cy, { maxWidth: textMaxWidth });
+          cy += 16;
+        }
+
+        doc.setFont('helvetica','normal'); doc.setFontSize(13); doc.setTextColor(15);
+        if(e.address){
+          const addrLines = doc.splitTextToSize(e.address, textMaxWidth);
+          doc.text(addrLines, padX, cy);
+          cy += addrLines.length * 16 + 6;
+        }
+        if(e.contact1){ doc.text(e.contact1, padX, cy); cy += 17; }
+        if(e.contact2){ doc.text(e.contact2, padX, cy); cy += 17; }
+        if(e.email){ doc.setFontSize(12); doc.text(`Email: ${e.email}`, padX, cy, { maxWidth: textMaxWidth }); }
+      });
+    });
+
+    window.open(doc.output('bloburl'), '_blank');
+    showToast('PDF opened in preview window');
+  }
+
+  function exportAddressPdf(list, note, showGroupSub, filename){
+    filename = filename || 'digital-address-book.pdf';
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({unit:'pt', format:'a4'});
+
+    const mm = 2.834645669;
+    const labelW = 100 * mm, labelH = 35 * mm;
+    const pageWidth = 595.28;
+    const columns = 2, rowsPerPage = 8;
+    const marginX = (pageWidth - columns*labelW) / 2;
+    const marginY = (841.89 - rowsPerPage*labelH) / 2;
+    const colWidth = labelW, rowHeight = labelH;
+    const perPage = columns * rowsPerPage;
+
+    if(!list.length){
+      doc.setFont('helvetica','normal'); doc.setFontSize(11); doc.setTextColor(20);
+      doc.text('No entries selected.', marginX, marginY + 20);
+      window.open(doc.output('bloburl'), '_blank');
+      showToast('PDF opened in preview window');
+      return;
+    }
+
+    list.forEach((e, i)=>{
+      if(i>0 && i % perPage === 0) doc.addPage();
+      const j = i % perPage;
+      const col = Math.floor(j / rowsPerPage);
+      const row = j % rowsPerPage;
+      const x = marginX + col*colWidth;
+      const y = marginY + row*rowHeight;
+
+      doc.setDrawColor(205);
+      doc.rect(x, y, colWidth, rowHeight);
+
+      const padX = x + 8;
+      const textMaxWidth = colWidth - 16;
+      let cy = y + 13;
+
+      doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.setTextColor(20);
+      doc.text(e.name || '', padX, cy, { maxWidth: textMaxWidth });
+      cy += 11;
+
+      if(e.company){
+        doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(60);
+        doc.text(e.company, padX, cy, { maxWidth: textMaxWidth });
+        cy += 9;
+      }
+
+      if(showGroupSub){
+        doc.setFont('helvetica','normal'); doc.setFontSize(7); doc.setTextColor(90);
+        doc.text(`${groupName(e.groupId)} / ${subgroupName(e.subgroupId)}`, padX, cy, { maxWidth: textMaxWidth });
+        cy += 8;
+      }
+
+      doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(15);
+      if(e.address){
+        const addrLines = doc.splitTextToSize(e.address, textMaxWidth);
+        doc.text(addrLines, padX, cy);
+        cy += addrLines.length * 9 + 2;
+      }
+      if(e.contact1){ doc.text(e.contact1, padX, cy); cy += 9; }
+      if(e.contact2){ doc.text(e.contact2, padX, cy); cy += 9; }
+      if(e.email){ doc.text(`Email: ${e.email}`, padX, cy, { maxWidth: textMaxWidth }); }
+    });
+
+    window.open(doc.output('bloburl'), '_blank');
+    showToast('PDF opened in preview window');
+  }
+
+  // ---------------- NAV / RENDER ----------------
+  const entityLabelsByTab = {
+    create: { group:'Group', subgroup:'Subgroup', address:'Address' },
+    modify: { group:'Group', subgroup:'Subgroup', address:'Address' },
+    view:   { group:'Group', subgroup:'Subgroup', address:'Address', birthdays:'Birthdays', search:'Search' }
+  };
+  const tabSubtitles = {
+    create: 'Add a new Group, Subgroup, Address Entry',
+    modify: 'Edit or delete an existing Group, Subgroup or Address entry',
+    view: 'Browse entries and view or export them as a PDF'
+  };
+
+  function renderEntityTabs(){
+    const labels = entityLabelsByTab[state.tab];
+    if(!labels[state.entity]) state.entity = 'address';
+    entityTabsEl.innerHTML = Object.keys(labels).map(k=>
+      `<div class="entity-tab ${state.entity===k?'active':''}" data-entity="${k}">${labels[k]}</div>`
+    ).join('');
+    entityTabsEl.querySelectorAll('[data-entity]').forEach(el=>{
+      el.onclick = ()=>{ state.entity = el.dataset.entity; state.editingId=null; render(); };
+    });
+  }
+
+  function renderScreen(){
+    const fnMap = {
+      create: { group: renderCreateGroup, subgroup: renderCreateSubgroup, address: renderCreateAddress },
+      modify: { group: renderModifyGroup, subgroup: renderModifySubgroup, address: renderModifyAddress },
+      view:   { group: renderViewGroup, subgroup: renderViewSubgroup, address: renderViewAddress, birthdays: renderViewBirthdays, search: renderViewSearch }
+    };
+    fnMap[state.tab][state.entity]();
+  }
+
+  function render(){
+    topSub.textContent = tabSubtitles[state.tab];
+    document.querySelectorAll('.navbtn').forEach(b=> b.classList.toggle('active', b.dataset.tab===state.tab));
+    renderEntityTabs();
+    renderScreen();
+  }
+
+  document.querySelectorAll('.navbtn').forEach(b=>{
+    b.onclick = ()=>{ state.tab = b.dataset.tab; state.editingId=null; render(); };
+  });
+  $('#backupBtn').onclick = showBackupModal;
+  $('#resetBtn').onclick = ()=> confirmModal(
+    'Clear ALL data (every Group, Subgroup and Address entry) and start a new address book? This cannot be undone.',
+    ()=>{
+      db = { groups: [], subgroups: [], entries: [], lastGroupId: null, lastSubgroupId: null };
+      state.editingId = null;
+      save();
+      showToast('All data cleared');
+      render();
+    },
+    'Yes, Clear All'
+  );
+
+  load();
+})();
+</script>
+</body>
+</html>
