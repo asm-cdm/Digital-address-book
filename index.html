@@ -3,11 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-<title>Digital Address Book Ver 1.4</title>
+<title>Digital Address Book Ver 1.5</title>
 <link rel="icon" type="image/png" href="https://asm-cdm.github.io/Digital-address-book/asm-favicon.png?v=2">
 <link rel="apple-touch-icon" href="https://asm-cdm.github.io/Digital-address-book/asm-favicon.png?v=2">
 <link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#1a3d8f">
+<meta name="theme-color" content="#1e3a8a">
 <script data-asm-persist-storage-module="true">
 // Runs on every app open (module: storage protection)
 // Request persistent storage so the browser doesn't
@@ -28,17 +28,17 @@ if (navigator.storage && navigator.storage.persist) {
 
 <style>
   :root{
-    --paper:#F3F6FC;
-    --paper-2:#E8EEF9;
-    --ink:#2A2A28;
-    --ink-soft:#6B6459;
+    --paper:#f8fafc;
+    --paper-2:#f1f5f9;
+    --ink:#1e293b;
+    --ink-soft:#64748b;
     --teal:#2f5db5;
-    --teal-dark:#1a3d8f;
+    --teal-dark:#1e3a8a;
     --brass:#B08A3E;
     --brass-soft:#DDBE84;
     --card:#FFFFFF;
     --danger:#A5403A;
-    --line:#D5DEF0;
+    --line:#cbd5e1;
     --radius:14px;
   }
   *{box-sizing:border-box;}
@@ -289,15 +289,16 @@ if (navigator.storage && navigator.storage.persist) {
     width:100%;
     max-width:430px;
     display:flex;
-    background:var(--teal-dark);
-    border-top:1px solid #12296b80;
+    background:#fff;
+    border-top:1px solid var(--line);
+    box-shadow:0 -2px 5px rgba(0,0,0,.05);
     z-index:10;
   }
   .navbtn{
     flex:1;
     text-align:center;
     padding:12px 4px 10px;
-    color:#BFD0F2;
+    color:#64748b;
     cursor:pointer;
     font-size:11.5px;
     font-weight:600;
@@ -305,7 +306,7 @@ if (navigator.storage && navigator.storage.persist) {
     border-top:3px solid transparent;
   }
   .navbtn .icon{font-size:19px;display:block;margin-bottom:2px;}
-  .navbtn.active{color:var(--brass-soft);border-top-color:var(--brass);}
+  .navbtn.active{color:var(--teal-dark);border-top-color:var(--teal-dark);}
   .toast{
     position:fixed;
     bottom:78px;
@@ -419,7 +420,7 @@ if (navigator.storage && navigator.storage.persist) {
   .view-head .section-label{margin:0;}
   .pdf-btn{background:var(--teal-dark);color:#fff;border:none;border-radius:10px;padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer;box-shadow:0 2px 6px rgba(26,61,143,.25);flex:none;}
   .pdf-btn:active{transform:scale(.97);}
-  .help-link{background:transparent;border:1.5px solid rgba(255,255,255,.6);color:#fff;border-radius:50%;width:34px;height:34px;font-size:16px;cursor:pointer;flex:none;}
+  .help-link{background:transparent;border:1.5px solid rgba(255,255,255,.6);color:#fff;border-radius:18px;padding:6px 13px;font-size:13px;font-weight:600;cursor:pointer;flex:none;white-space:nowrap;}
   .bk-card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:14px;margin-bottom:14px;}
   .bk-card h3{margin:0 0 4px;font-size:15px;color:var(--teal-dark);}
   .bk-card .last{font-size:12.5px;color:var(--ink-soft);margin:0 0 10px;}
@@ -442,14 +443,14 @@ if (navigator.storage && navigator.storage.persist) {
     <div class="topbar">
       <div class="topbar-row">
         <h1>Digital Address Book</h1>
-        <button id="helpBtn" class="help-link" type="button" title="Help">❓</button>
+        <button id="helpBtn" class="help-link" type="button" title="Help">? Help</button>
       </div>
       <div class="sub-row">
         <div class="sub" id="topSub">Add a new Group, Subgroup, Address Entry</div>
       </div>
       <div class="owner-line-row">
         <span>Powered by A.S.M Consultancy Services</span>
-        <span>Ver 1.4</span>
+        <span>Ver 1.5</span>
       </div>
       <div class="owner-line-row">
         <span>Chidambaram</span>
