@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-<title>Digital Address Book Ver 1.2</title>
+<title>Digital Address Book Ver 1.3</title>
 <link rel="icon" type="image/png" href="https://asm-cdm.github.io/Digital-address-book/asm-favicon.png?v=2">
 <link rel="apple-touch-icon" href="https://asm-cdm.github.io/Digital-address-book/asm-favicon.png?v=2">
 <link rel="manifest" href="manifest.json">
@@ -28,17 +28,17 @@ if (navigator.storage && navigator.storage.persist) {
 
 <style>
   :root{
-    --paper:#F6F1E4;
-    --paper-2:#EFE7D3;
+    --paper:#F3F6FC;
+    --paper-2:#E8EEF9;
     --ink:#2A2A28;
     --ink-soft:#6B6459;
-    --teal:#2F4F4C;
-    --teal-dark:#1E3634;
+    --teal:#2f5db5;
+    --teal-dark:#1a3d8f;
     --brass:#B08A3E;
     --brass-soft:#DDBE84;
     --card:#FFFFFF;
     --danger:#A5403A;
-    --line:#E0D6BE;
+    --line:#D5DEF0;
     --radius:14px;
   }
   *{box-sizing:border-box;}
@@ -290,14 +290,14 @@ if (navigator.storage && navigator.storage.persist) {
     max-width:430px;
     display:flex;
     background:var(--teal-dark);
-    border-top:1px solid #17282680;
+    border-top:1px solid #12296b80;
     z-index:10;
   }
   .navbtn{
     flex:1;
     text-align:center;
     padding:12px 4px 10px;
-    color:#A9BDB8;
+    color:#BFD0F2;
     cursor:pointer;
     font-size:11.5px;
     font-weight:600;
@@ -414,6 +414,20 @@ if (navigator.storage && navigator.storage.persist) {
   .drive-warn{position:fixed;left:50%;top:18px;transform:translateX(-50%);max-width:90%;background:#8a5a00;color:#fff;
     padding:10px 16px;border-radius:10px;font-size:13px;z-index:9999;opacity:0;pointer-events:none;transition:opacity .3s;text-align:center;}
   .drive-warn.show{opacity:1;}
+
+  .help-link{background:transparent;border:1.5px solid rgba(255,255,255,.6);color:#fff;border-radius:50%;width:34px;height:34px;font-size:16px;cursor:pointer;flex:none;}
+  .bk-card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:14px;margin-bottom:14px;}
+  .bk-card h3{margin:0 0 4px;font-size:15px;color:var(--teal-dark);}
+  .bk-card .last{font-size:12.5px;color:var(--ink-soft);margin:0 0 10px;}
+  .bk-card .btn{width:100%;margin-top:8px;}
+  .modal-center p{text-align:center;}
+  .help-topic{display:block;width:100%;text-align:left;margin-top:8px;}
+  .help-text{font-size:13.5px;line-height:1.55;color:var(--ink);text-align:left;white-space:pre-line;}
+  @media (min-width:900px){
+    .phone{max-width:900px;box-shadow:0 0 30px rgba(26,61,143,.12);}
+    .bottomnav{max-width:900px;}
+    #screen{padding-left:40px;padding-right:40px;}
+  }
 </style>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
@@ -424,15 +438,14 @@ if (navigator.storage && navigator.storage.persist) {
     <div class="topbar">
       <div class="topbar-row">
         <h1>Digital Address Book</h1>
-        <button id="resetBtn" class="reset-link" type="button">⟲ Reset</button>
+        <button id="helpBtn" class="help-link" type="button" title="Help">❓</button>
       </div>
       <div class="sub-row">
         <div class="sub" id="topSub">Add a new Group, Subgroup, Address Entry</div>
-        <button id="backupBtn" class="backup-link" type="button">⇅ Backup</button>
       </div>
       <div class="owner-line-row">
         <span>Powered by A.S.M Consultancy Services</span>
-        <span>Ver 1.2</span>
+        <span>Ver 1.3</span>
       </div>
       <div class="owner-line-row">
         <span>Chidambaram</span>
@@ -446,11 +459,11 @@ if (navigator.storage && navigator.storage.persist) {
       <div class="navbtn" data-tab="create"><span class="icon">＋</span>Create</div>
       <div class="navbtn" data-tab="modify"><span class="icon">✎</span>Modify</div>
       <div class="navbtn" data-tab="view"><span class="icon">▤</span>View / PDF</div>
+      <div class="navbtn" data-tab="backup"><span class="icon">⇅</span>Backup</div>
     </div>
   </div>
   <div id="toast" class="toast"></div>
   <div id="modalRoot"></div>
-  <div id="driveWarn" class="drive-warn"></div>
 </div>
 
 <script>
@@ -483,6 +496,13 @@ if (navigator.storage && navigator.storage.persist) {
     t.classList.add('show');
     clearTimeout(t._timer);
     t._timer = setTimeout(()=>t.classList.remove('show'), 1800);
+  }
+
+  function showPopup(msg, ms){
+    const root = $('#modalRoot');
+    root.innerHTML = `<div class="modal-backdrop"><div class="modal modal-center"><p>${msg}</p>${ms?'':'<div class="actions" style="justify-content:center;"><button class="btn btn-outline btn-small" id="popOk">OK</button></div>'}</div></div>`;
+    if(ms) setTimeout(()=>{ root.innerHTML=''; }, ms);
+    else root.querySelector('#popOk').onclick = ()=>{ root.innerHTML=''; };
   }
 
   function confirmModal(msg, onYes, yesLabel){
@@ -636,7 +656,7 @@ if (navigator.storage && navigator.storage.persist) {
       lastGroupId: parsed.lastGroupId || null, lastSubgroupId: parsed.lastSubgroupId || null
     };
     save();
-    showToast('Restored from Google Drive');
+    showPopup('Restored from Google Drive');
     render();
   }
 
@@ -649,16 +669,16 @@ if (navigator.storage && navigator.storage.persist) {
     showToast('Signing in…');
     try{
       await driveBackupNow();
-      showToast('Backed up to Google Drive');
+      showPopup('Backed up to Google Drive');
       driveRefreshLast();
-    }catch(e){ showToast(e.message || 'Drive backup failed'); }
+    }catch(e){ showPopup(e.message || 'Drive backup failed'); }
   }
 
   async function driveRestoreClick(){
     const box = document.getElementById('driveList');
     try{
       const files = await driveListBackups();
-      if(!files.length){ showToast('No backup found in Drive'); return; }
+      if(!files.length){ showPopup('No backup found in Drive'); return; }
       box.innerHTML = files.map(f=>`<button class="btn btn-outline btn-small" data-fid="${f.id}">${f.name}</button>`).join('');
       box.querySelectorAll('[data-fid]').forEach(b=>{
         b.onclick = async ()=>{
@@ -666,10 +686,10 @@ if (navigator.storage && navigator.storage.persist) {
             const parsed = await driveDownload(b.dataset.fid);
             if(!parsed || !Array.isArray(parsed.groups) || !Array.isArray(parsed.entries)){ showToast('Not a valid backup file'); return; }
             confirmModal('Replace all data on this device with this Drive backup? This cannot be undone.', ()=>driveApplyRestore(parsed), 'Replace');
-          }catch(e){ showToast(e.message || 'Restore failed'); }
+          }catch(e){ showPopup(e.message || 'Restore failed'); }
         };
       });
-    }catch(e){ showToast(e.message || 'Drive restore failed'); }
+    }catch(e){ showPopup(e.message || 'Drive restore failed'); }
   }
 
   function driveShowWarning(){
@@ -678,12 +698,59 @@ if (navigator.storage && navigator.storage.persist) {
     const v = driveLastGet();
     const old = !v || (Date.now() - new Date(v).getTime()) > DRIVE_WARN_DAYS * 86400000;
     if(!old) return;
-    const w = document.getElementById('driveWarn');
-    w.textContent = 'Not backed up to Google Drive recently. Go to Backup / Restore';
-    w.classList.add('show');
-    setTimeout(()=>w.classList.remove('show'), DRIVE_WARN_MS);
+    showPopup('Not backed up to Google Drive recently.<br>Go to Backup / Restore', DRIVE_WARN_MS);
   }
   /* ===== END MODULE: Google Drive backup ===== */
+
+  /* ===== MODULE: Backup screen ===== */
+  function renderBackup(){
+    screen.innerHTML = `
+      <div class="section-label">Backup / Restore</div>
+      <div class="bk-card">
+        <h3>Google Drive</h3>
+        <p class="last" id="driveLast">${driveLastText()}</p>
+        <button class="btn btn-primary" id="doDriveBackup" style="margin-top:0;">Backup to Google Drive</button>
+        <button class="btn btn-outline" id="doDriveRestore">Restore from Google Drive</button>
+        <div class="drive-list" id="driveList"></div>
+      </div>
+      <div class="bk-card">
+        <h3>Backup file</h3>
+        <p class="last">Save all data as one file, or load a saved file.</p>
+        <button class="btn btn-primary" id="doExport" style="margin-top:0;">Export Backup File</button>
+        <button class="btn btn-outline" id="doImport">Import Backup File</button>
+        <input type="file" id="importFileInput" accept="application/json,.json" style="display:none;">
+      </div>
+      <div class="bk-card">
+        <h3>Reset All Data</h3>
+        <p class="last">Clears every Group, Subgroup and Address entry on this device.</p>
+        <button class="btn btn-primary" id="doReset" style="margin-top:0;">Reset All Data</button>
+      </div>`;
+    $('#doDriveBackup').onclick = driveBackupClick;
+    $('#doDriveRestore').onclick = driveRestoreClick;
+    $('#doExport').onclick = exportData;
+    $('#doImport').onclick = ()=> $('#importFileInput').click();
+    $('#importFileInput').onchange = (ev)=> importData(ev.target.files[0]);
+    $('#doReset').onclick = resetAllData;
+  }
+  /* ===== MODULE: Help ===== */
+  const HELP_TOPICS = {
+    'Create': 'Create tab: add a Group, then a Subgroup under it, then Address entries. Pick the entity at the top (Group / Subgroup / Address).',
+    'Modify': 'Modify tab: choose Group, Subgroup or Address, then edit or delete an item.',
+    'View / PDF': 'View / PDF tab: see lists, search, birthdays and anniversaries. Use the PDF buttons to print lists or sticker labels.',
+    'Backup / Restore': 'Backup tab:\n• Google Drive: sign in and tap Backup. Restore picks a saved year file.\n• Backup file: export or import a file on your phone.\n• Reset All Data clears everything on this device.\nA reminder shows when the last Drive backup is more than 4 days old. Open the app in Chrome for Google sign-in.',
+    'Privacy': 'Your data stays on this device. If you use Google Drive backup, the file is saved only in your own Google Drive (folder ASM Backups) and the app can see only the files it creates. Nothing is sent to us.\nContact: muralinarayanans@gmail.com'
+  };
+  function showHelp(topic){
+    const root = $('#modalRoot');
+    const body = topic
+      ? `<p class="help-text"><b>${topic}</b>\n${HELP_TOPICS[topic]}</p><div class="actions"><button class="btn btn-outline btn-small" id="helpBack">Back</button><button class="btn btn-outline btn-small" id="helpClose">✕</button></div>`
+      : `<p style="font-weight:700;color:var(--teal-dark);margin-bottom:4px;">Help</p>${Object.keys(HELP_TOPICS).map(t=>`<button class="btn btn-outline help-topic" data-t="${t}">${t}</button>`).join('')}<div class="actions" style="margin-top:14px;"><button class="btn btn-outline btn-small" id="helpClose">✕</button></div>`;
+    root.innerHTML = `<div class="modal-backdrop"><div class="modal">${body}</div></div>`;
+    root.querySelectorAll('[data-t]').forEach(b=> b.onclick = ()=> showHelp(b.dataset.t));
+    const back = root.querySelector('#helpBack'); if(back) back.onclick = ()=> showHelp();
+    root.querySelector('#helpClose').onclick = ()=>{ root.innerHTML=''; };
+  }
+  /* ===== END MODULES ===== */
 
   function showBackupModal(){
     const root = $('#modalRoot');
@@ -722,7 +789,7 @@ if (navigator.storage && navigator.storage.persist) {
     a.download = `digital-address-book-backup-${stamp}.json`;
     document.body.appendChild(a); a.click(); document.body.removeChild(a);
     URL.revokeObjectURL(url);
-    showToast('Backup file saved');
+    showPopup('Backup file saved');
   }
 
   function importData(file){
@@ -746,7 +813,7 @@ if (navigator.storage && navigator.storage.persist) {
             lastSubgroupId: parsed.lastSubgroupId || null
           };
           save();
-          showToast('Backup restored');
+          showPopup('Backup restored');
           render();
         },
         'Replace'
@@ -1837,12 +1904,14 @@ if (navigator.storage && navigator.storage.persist) {
     view:   { group:'Group', subgroup:'Subgroup', address:'Address', birthdays:'Birthdays', search:'Search' }
   };
   const tabSubtitles = {
+    backup: 'Backup, restore and reset',
     create: 'Add a new Group, Subgroup, Address Entry',
     modify: 'Edit or delete an existing Group, Subgroup or Address entry',
     view: 'Browse entries and view or export them as a PDF'
   };
 
   function renderEntityTabs(){
+    if(state.tab==='backup'){ entityTabsEl.innerHTML=''; return; }
     const labels = entityLabelsByTab[state.tab];
     if(!labels[state.entity]) state.entity = 'address';
     entityTabsEl.innerHTML = Object.keys(labels).map(k=>
@@ -1859,12 +1928,14 @@ if (navigator.storage && navigator.storage.persist) {
       modify: { group: renderModifyGroup, subgroup: renderModifySubgroup, address: renderModifyAddress },
       view:   { group: renderViewGroup, subgroup: renderViewSubgroup, address: renderViewAddress, birthdays: renderViewBirthdays, search: renderViewSearch }
     };
+    if(state.tab==='backup'){ renderBackup(); return; }
     fnMap[state.tab][state.entity]();
   }
 
   function render(){
     topSub.textContent = tabSubtitles[state.tab];
     document.querySelectorAll('.navbtn').forEach(b=> b.classList.toggle('active', b.dataset.tab===state.tab));
+    entityTabsEl.style.display = state.tab==='backup' ? 'none' : '';
     renderEntityTabs();
     renderScreen();
   }
@@ -1872,18 +1943,18 @@ if (navigator.storage && navigator.storage.persist) {
   document.querySelectorAll('.navbtn').forEach(b=>{
     b.onclick = ()=>{ state.tab = b.dataset.tab; state.editingId=null; render(); };
   });
-  $('#backupBtn').onclick = showBackupModal;
-  $('#resetBtn').onclick = ()=> confirmModal(
+  $('#helpBtn').onclick = ()=> showHelp();
+  function resetAllData(){ confirmModal(
     'Clear ALL data (every Group, Subgroup and Address entry) and start a new address book? This cannot be undone.',
     ()=>{
       db = { groups: [], subgroups: [], entries: [], lastGroupId: null, lastSubgroupId: null };
       state.editingId = null;
       save();
-      showToast('All data cleared');
+      showPopup('All data cleared');
       render();
     },
     'Yes, Clear All'
-  );
+  ); }
 
   load();
 })();
