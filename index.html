@@ -813,13 +813,19 @@ if (navigator.storage && navigator.storage.persist) {
       <div id="sgList"></div>
     `;
     function refreshList(){
-      const list = db.subgroups.map(s=>`<div class="card-item"><span class="name">${s.name}</span><span class="tag">${groupName(s.groupId)}</span></div>`).join('') || `<div class="empty">No subgroups yet.</div>`;
-      $('#sgList').innerHTML = list;
+      const gid = $('#sgGroup').value;
+      if(!gid){
+        $('#sgList').innerHTML = `<div class="empty">Select a group to see its subgroups.</div>`;
+        return;
+      }
+      const items = subgroupsFor(gid).slice().sort((x,y)=>x.name.localeCompare(y.name));
+      $('#sgList').innerHTML = items.map(s=>`<div class="card-item"><span class="name">${s.name}</span></div>`).join('') || `<div class="empty">No subgroups under this group yet.</div>`;
     }
-    refreshList();
+    $('#sgGroup').onchange = refreshList;
     if(db.lastSubgroupGroupId && db.groups.find(g=>g.id===db.lastSubgroupGroupId)){
       $('#sgGroup').value = db.lastSubgroupGroupId;
     }
+    refreshList();
     if(existingNames.length){
       $('#sgExisting').onchange = ()=>{
         const v = $('#sgExisting').value;
