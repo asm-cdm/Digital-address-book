@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-<title>Digital Address Book Ver 1.3</title>
+<title>Digital Address Book Ver 1.4</title>
 <link rel="icon" type="image/png" href="https://asm-cdm.github.io/Digital-address-book/asm-favicon.png?v=2">
 <link rel="apple-touch-icon" href="https://asm-cdm.github.io/Digital-address-book/asm-favicon.png?v=2">
 <link rel="manifest" href="manifest.json">
@@ -415,6 +415,10 @@ if (navigator.storage && navigator.storage.persist) {
     padding:10px 16px;border-radius:10px;font-size:13px;z-index:9999;opacity:0;pointer-events:none;transition:opacity .3s;text-align:center;}
   .drive-warn.show{opacity:1;}
 
+  .view-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:6px;}
+  .view-head .section-label{margin:0;}
+  .pdf-btn{background:var(--teal-dark);color:#fff;border:none;border-radius:10px;padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer;box-shadow:0 2px 6px rgba(26,61,143,.25);flex:none;}
+  .pdf-btn:active{transform:scale(.97);}
   .help-link{background:transparent;border:1.5px solid rgba(255,255,255,.6);color:#fff;border-radius:50%;width:34px;height:34px;font-size:16px;cursor:pointer;flex:none;}
   .bk-card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:14px;margin-bottom:14px;}
   .bk-card h3{margin:0 0 4px;font-size:15px;color:var(--teal-dark);}
@@ -445,7 +449,7 @@ if (navigator.storage && navigator.storage.persist) {
       </div>
       <div class="owner-line-row">
         <span>Powered by A.S.M Consultancy Services</span>
-        <span>Ver 1.3</span>
+        <span>Ver 1.4</span>
       </div>
       <div class="owner-line-row">
         <span>Chidambaram</span>
@@ -503,6 +507,20 @@ if (navigator.storage && navigator.storage.persist) {
     root.innerHTML = `<div class="modal-backdrop"><div class="modal modal-center"><p>${msg}</p>${ms?'':'<div class="actions" style="justify-content:center;"><button class="btn btn-outline btn-small" id="popOk">OK</button></div>'}</div></div>`;
     if(ms) setTimeout(()=>{ root.innerHTML=''; }, ms);
     else root.querySelector('#popOk').onclick = ()=>{ root.innerHTML=''; };
+  }
+
+  function viewHead(title){
+    return `<div class="view-head"><div class="section-label">${title}</div><button class="pdf-btn" id="pdfTop" type="button">⬇ PDF</button></div>`;
+  }
+  function savePdf(doc, filename){
+    doc.save(filename || 'Digital-Address-Book.pdf');
+    showPopup('PDF saved', 1800);
+  }
+  function pdfChoice(options){
+    const root = $('#modalRoot');
+    root.innerHTML = `<div class="modal-backdrop"><div class="modal"><p style="font-weight:700;color:var(--teal-dark);margin-bottom:4px;">Save PDF</p>${options.map((o,i)=>`<button class="btn btn-outline help-topic" data-i="${i}">${o.label}</button>`).join('')}<div class="actions" style="margin-top:14px;"><button class="btn btn-outline btn-small" id="pcClose">Cancel</button></div></div></div>`;
+    root.querySelectorAll('[data-i]').forEach(b=> b.onclick = ()=>{ root.innerHTML=''; options[b.dataset.i].run(); });
+    root.querySelector('#pcClose').onclick = ()=>{ root.innerHTML=''; };
   }
 
   function confirmModal(msg, onYes, yesLabel){
@@ -1224,23 +1242,24 @@ if (navigator.storage && navigator.storage.persist) {
   // ---------------- VIEW / PDF ----------------
   function renderViewGroup(){
     screen.innerHTML = `
-      <div class="section-label">All Groups</div>
+      ${viewHead('All Groups')}
       <div id="vgList"></div>
-      <button class="btn btn-primary" id="pdfGroups">View / Print Group List PDF</button>
+      <div style="display:none"><button id="pdfGroups"></button></div>
     `;
     $('#vgList').innerHTML = db.groups.map(g=>`
       <div class="card-item"><span class="name">${g.name}</span>
       <span class="count-pill">${subgroupsFor(g.id).length} subgroup(s) · ${entriesFor(g.id).length} entr${entriesFor(g.id).length===1?'y':'ies'}</span></div>
     `).join('') || `<div class="empty">No groups yet.</div>`;
     $('#pdfGroups').onclick = ()=> exportGroupsPdf();
+    $('#pdfTop').onclick = ()=> $('#pdfGroups').click();
   }
 
   function renderViewSubgroup(){
     screen.innerHTML = `
-      <div class="section-label">Subgroups</div>
+      ${viewHead('Subgroups')}
       <div class="filterbar"><select id="vsGroup">${selectOptions(db.groups,'id',g=>g.name,'All groups')}</select></div>
       <div id="vsList"></div>
-      <button class="btn btn-primary" id="pdfSub">View / Print Subgroup List PDF</button>
+      <div style="display:none"><button id="pdfSub"></button></div>
     `;
     function refresh(){
       const gid = $('#vsGroup').value;
@@ -1253,12 +1272,13 @@ if (navigator.storage && navigator.storage.persist) {
     $('#vsGroup').onchange = refresh;
     refresh();
     $('#pdfSub').onclick = ()=> exportSubgroupsPdf($('#vsGroup').value);
+    $('#pdfTop').onclick = ()=> $('#pdfSub').click();
   }
 
   function renderViewAddress(){
     let revealed = false;
     screen.innerHTML = `
-      <div class="section-label">Address Book</div>
+      ${viewHead('Address Book')}
       <div class="filterbar">
         <select id="pfGroup">${selectOptions(db.groups,'id',g=>g.name,'All groups')}</select>
         <select id="pfSub"><option value="">All subgroups</option></select>
@@ -1268,10 +1288,15 @@ if (navigator.storage && navigator.storage.persist) {
         <span class="count-pill" id="selCount"></span>
       </div>
       <div id="pvList"><div class="empty"><div class="big">Choose Group &amp; Subgroup</div>Select both above to view matching entries here.</div></div>
-      <button class="btn btn-primary" id="pdfAddr" style="display:none;">View / Print Selected PDF</button>
-      <button class="btn btn-outline" id="pdfAll" style="width:100%;margin-top:10px;">View / Print ALL Entries PDF</button>
-      <button class="btn btn-outline" id="pdfAllGS" style="width:100%;margin-top:10px;">View / Print Grouped PDF</button>
+      <div style="display:none">
+        <button id="pdfAddr"></button><button id="pdfAll"></button><button id="pdfAllGS"></button>
+      </div>
     `;
+    $('#pdfTop').onclick = ()=> pdfChoice([
+      {label:'Selected entries (shown below)', run:()=> $('#pdfAddr').click()},
+      {label:'All entries', run:()=> $('#pdfAll').click()},
+      {label:'Grouped (Group / Subgroup)', run:()=> $('#pdfAllGS').click()}
+    ]);
     function currentFiltered(){
       return entriesFor($('#pfGroup').value, $('#pfSub').value);
     }
@@ -1387,7 +1412,7 @@ if (navigator.storage && navigator.storage.persist) {
 
   function renderViewBirthdays(){
     screen.innerHTML = `
-      <div class="section-label">Birthdays &amp; Anniversaries</div>
+      ${viewHead('Birthdays &amp; Anniversaries')}
       <label>Show</label>
       <select id="bdType">
         <option value="both">Birthday &amp; Anniversary</option>
@@ -1406,8 +1431,10 @@ if (navigator.storage && navigator.storage.persist) {
         <select id="bdSub"><option value="">All subgroups</option></select>
       </div>
       <div id="bdList"><div class="empty"><div class="big">Choose a Month</div>Select a month above to see matching birthdays and anniversaries.</div></div>
-      <button class="btn btn-primary" id="bdExport" style="display:none;">View / Print List PDF</button>
+      <div style="display:none"><button id="bdExport"></button></div>
     `;
+
+    $('#pdfTop').onclick = ()=>{ if($('#bdExport').style.display==='none'){ showPopup('Choose a month first, then save the PDF'); } else $('#bdExport').click(); };
 
     function updateBdSubOptions(){
       const gid = $('#bdGroup').value;
@@ -1682,8 +1709,7 @@ if (navigator.storage && navigator.storage.persist) {
     if(!db.groups.length){ doc.text('No groups yet.',40,y); }
     footer(doc,y);
 
-    window.open(doc.output('bloburl'), '_blank');
-    showToast('PDF opened in preview window');
+    savePdf(doc, 'Digital-Address-Book-Groups.pdf');
   }
 
   function exportSubgroupsPdf(gid){
@@ -1701,8 +1727,7 @@ if (navigator.storage && navigator.storage.persist) {
     if(!list.length){ doc.text('No subgroups found.',40,y); }
     footer(doc,y);
 
-    window.open(doc.output('bloburl'), '_blank');
-    showToast('PDF opened in preview window');
+    savePdf(doc, 'Digital-Address-Book-Subgroups.pdf');
   }
 
   function exportBirthdaysPdf(rows, titleSuffix, filename){
@@ -1729,8 +1754,7 @@ if (navigator.storage && navigator.storage.persist) {
     if(!rows.length){
       doc.setFont('helvetica','normal'); doc.setFontSize(11); doc.setTextColor(20);
       doc.text('No matching birthdays or anniversaries.', marginX, y);
-      window.open(doc.output('bloburl'), '_blank');
-      showToast('PDF opened in preview window');
+      savePdf(doc, filename);
       return;
     }
 
@@ -1750,8 +1774,7 @@ if (navigator.storage && navigator.storage.persist) {
       y += 20;
     });
 
-    window.open(doc.output('bloburl'), '_blank');
-    showToast('PDF opened in preview window');
+    savePdf(doc, filename);
   }
 
   function exportAddressPdfGrouped(pairs, filename){
@@ -1762,8 +1785,7 @@ if (navigator.storage && navigator.storage.persist) {
     if(!pairs.length){
       doc.setFont('helvetica','normal'); doc.setFontSize(11); doc.setTextColor(20);
       doc.text('No entries found.', 40, 40);
-      window.open(doc.output('bloburl'), '_blank');
-      showToast('PDF opened in preview window');
+      savePdf(doc, filename);
       return;
     }
 
@@ -1825,8 +1847,7 @@ if (navigator.storage && navigator.storage.persist) {
       });
     });
 
-    window.open(doc.output('bloburl'), '_blank');
-    showToast('PDF opened in preview window');
+    savePdf(doc, filename);
   }
 
   function exportAddressPdf(list, note, showGroupSub, filename){
@@ -1846,8 +1867,7 @@ if (navigator.storage && navigator.storage.persist) {
     if(!list.length){
       doc.setFont('helvetica','normal'); doc.setFontSize(11); doc.setTextColor(20);
       doc.text('No entries selected.', marginX, marginY + 20);
-      window.open(doc.output('bloburl'), '_blank');
-      showToast('PDF opened in preview window');
+      savePdf(doc, filename);
       return;
     }
 
@@ -1893,8 +1913,7 @@ if (navigator.storage && navigator.storage.persist) {
       if(e.email){ doc.text(`Email: ${e.email}`, padX, cy, { maxWidth: textMaxWidth }); }
     });
 
-    window.open(doc.output('bloburl'), '_blank');
-    showToast('PDF opened in preview window');
+    savePdf(doc, filename);
   }
 
   // ---------------- NAV / RENDER ----------------
