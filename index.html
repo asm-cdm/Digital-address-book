@@ -428,6 +428,30 @@ if (navigator.storage && navigator.storage.persist) {
   .modal-center p{text-align:center;}
   .help-topic{display:block;width:100%;text-align:left;margin-top:8px;}
   .help-text{font-size:13.5px;line-height:1.55;color:var(--ink);text-align:left;white-space:pre-line;}
+  .dt-wrap{display:flex;gap:6px;} .dt-wrap input{flex:1;min-width:0;}
+  .dt-btn{border:1.5px solid var(--line);background:#fff;border-radius:10px;padding:0 12px;font-size:18px;cursor:pointer;flex:none;}
+  .dt-err input{border-color:var(--danger) !important;background:#fdf1ef;}
+  .dt-msg{font-size:12px;color:var(--danger);margin:-6px 0 10px;min-height:0;}
+  .dt-msg:empty{display:none;}
+  .dt-head{display:flex;align-items:center;justify-content:space-between;gap:6px;margin-bottom:8px;}
+  .dt-head button{border:none;border-radius:8px;background:var(--paper-2);color:var(--teal-dark);font-weight:700;font-size:14px;padding:8px 10px;cursor:pointer;font-family:inherit;}
+  .dt-head button:disabled{opacity:.3;cursor:default;}
+  .dt-head .dt-mid{display:flex;gap:6px;flex:1;justify-content:center;}
+  .dt-head .dt-mid button{background:var(--teal);color:#fff;}
+  .dt-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin:6px 0 10px;}
+  .dt-h{font-size:11px;font-weight:700;color:var(--ink-soft);text-align:center;padding:4px 0;}
+  .dt-d{padding:9px 0;border-radius:8px;font-size:14px;text-align:center;cursor:pointer;border:none;background:transparent;color:var(--ink);font-family:inherit;}
+  .dt-d:hover,.dt-d.sel{background:var(--teal);color:#fff;}
+  .dt-d.off{color:#c2c8d0;cursor:default;pointer-events:none;}
+  .dt-months{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:6px 0 10px;}
+  .dt-months button{padding:12px 0;border-radius:10px;border:1.5px solid var(--line);background:#fff;font-size:14px;font-weight:600;cursor:pointer;color:var(--ink);font-family:inherit;}
+  .dt-months button.sel{background:var(--teal);color:#fff;border-color:var(--teal);}
+  .dt-months button:disabled{opacity:.3;cursor:default;}
+  .dt-years{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;max-height:260px;overflow-y:auto;margin:6px 0 10px;position:relative;}
+  .dt-years button{padding:10px 0;border-radius:8px;border:1.5px solid var(--line);background:#fff;font-size:14px;cursor:pointer;color:var(--ink);font-family:inherit;}
+  .dt-years button.sel{background:var(--teal);color:#fff;border-color:var(--teal);}
+  .dt-foot{display:flex;gap:8px;}
+  .dt-foot .btn{flex:1;}
   @media (min-width:900px){
     .phone{max-width:900px;box-shadow:0 0 30px rgba(26,61,143,.12);}
     .bottomnav{max-width:900px;}
@@ -486,7 +510,7 @@ if (navigator.storage && navigator.storage.persist) {
 
   function parseDMY(str){
     if(!str || !str.trim()) return null;
-    const m = str.trim().match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+    const m = str.trim().match(/^(\d{2})[-\/](\d{2})[-\/](\d{4})$/);
     if(!m) return null;
     const d = parseInt(m[1],10), mo = parseInt(m[2],10), y = parseInt(m[3],10);
     if(mo<1||mo>12) return null;
@@ -494,6 +518,139 @@ if (navigator.storage && navigator.storage.persist) {
     if(dt.getFullYear()!==y || dt.getMonth()!==mo-1 || dt.getDate()!==d) return null;
     return { day:d, month:mo, year:y };
   }
+
+
+  /* ===== MODULE: Date fields (Birthday / Anniversary) - DD-MM-YYYY, validation + picker ===== */
+  const DT_RULES = { birthday:{label:'Birthday', back:120}, anniversary:{label:'Anniversary', back:100} };
+  const DT_OPEN_YEAR = 1985;                      // year list opens here
+  const DT_MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const dtPad = n => String(n).padStart(2,'0');
+  function dtNorm(str){                           // any stored date text -> DD-MM-YYYY
+    const m = String(str||'').trim().match(/^(\d{1,2})[-\/.](\d{1,2})[-\/.](\d{4})$/);
+    return m ? dtPad(m[1])+'-'+dtPad(m[2])+'-'+m[3] : String(str||'').trim();
+  }
+  function dtNormalizeDb(){                       // old DD/MM/YYYY entries -> DD-MM-YYYY
+    (db.entries||[]).forEach(e=>{
+      if(e.birthday) e.birthday = dtNorm(e.birthday);
+      if(e.anniversary) e.anniversary = dtNorm(e.anniversary);
+    });
+  }
+  function dtHtml(id, kind, value){
+    return `<div class="dt-wrap" id="${id}-wrap"><input type="text" id="${id}" data-kind="${kind}" value="${value||''}" placeholder="DD-MM-YYYY" inputmode="numeric" maxlength="10" oninput="dtMask(this)"><button type="button" class="dt-btn" onclick="dtOpen('${id}')">📅</button></div><div class="dt-msg" id="${id}-msg"></div>`;
+  }
+  function dtShow(id, msg){
+    const w = document.getElementById(id+'-wrap'), b = document.getElementById(id+'-msg');
+    if(w) w.classList.toggle('dt-err', !!msg);
+    if(b) b.textContent = msg || '';
+  }
+  function dtMask(el){
+    let v = el.value.replace(/[^0-9]/g,'').slice(0,8);
+    if(v.length>4) v = v.slice(0,2)+'-'+v.slice(2,4)+'-'+v.slice(4);
+    else if(v.length>2) v = v.slice(0,2)+'-'+v.slice(2);
+    el.value = v;
+    if(v.length<10){ dtShow(el.id,''); return; }
+    const r = dtValidate(el.id);
+    dtShow(el.id, r.ok ? '' : r.msg);
+  }
+  function dtValidate(id){                        // empty = OK (optional field)
+    const el = document.getElementById(id), rule = DT_RULES[el.dataset.kind], v = el.value.trim();
+    if(!v) return {ok:true, empty:true, value:''};
+    if(!/^\d{2}-\d{2}-\d{4}$/.test(v)) return {ok:false, msg:rule.label+' must be DD-MM-YYYY, e.g. 05-08-1990'};
+    const p = parseDMY(v);
+    if(!p) return {ok:false, msg:'Invalid date - this day does not exist'};
+    const now = new Date(), cy = now.getFullYear();
+    const dt = new Date(p.year, p.month-1, p.day);
+    if(dt > now) return {ok:false, msg:rule.label+' cannot be a future date'};
+    if(p.year < cy - rule.back) return {ok:false, msg:'Year must be '+(cy-rule.back)+' or later'};
+    return {ok:true, value:v, date:dt};
+  }
+  function dtCheckBoth(bId, aId){                 // at save: returns {bday, anniv} or null (blocked)
+    const b = dtValidate(bId), a = dtValidate(aId);
+    if(!b.ok){ dtShow(bId, b.msg); showToast(b.msg); return null; }
+    if(!a.ok){ dtShow(aId, a.msg); showToast(a.msg); return null; }
+    if(b.date && a.date && a.date <= b.date){
+      if(!confirm('Anniversary date is before (or same as) the birthday.\n\nSave anyway?')) return null;
+    }
+    return {bday:b.value, anniv:a.value};
+  }
+  /* ---- picker ---- */
+  let dtState = null;
+  function dtOpen(id){
+    const el = document.getElementById(id), rule = DT_RULES[el.dataset.kind];
+    const now = new Date(), cy = now.getFullYear();
+    const cur = dtValidate(id);
+    const p = (cur.ok && cur.value) ? parseDMY(cur.value) : null;
+    dtState = { id, minY: cy-rule.back, maxY: cy, view:'days',
+                y: p ? p.year : cy, m: p ? p.month-1 : now.getMonth(), selD: p ? p.day : 0,
+                selY: p ? p.year : 0, selM: p ? p.month-1 : -1, openY: p ? p.year : DT_OPEN_YEAR };
+    dtClampMonth(); dtDraw();
+  }
+  function dtClampMonth(){
+    const now = new Date();
+    if(dtState.y === now.getFullYear() && dtState.m > now.getMonth()) dtState.m = now.getMonth();
+  }
+  function dtClose(){ const o = document.getElementById('dtPop'); if(o) o.remove(); dtState = null; }
+  function dtView(v){ dtState.view = v; dtDraw(); }
+  function dtNav(n){
+    const now = new Date(); let y = dtState.y, m = dtState.m + n;
+    if(m<0){ m=11; y--; } if(m>11){ m=0; y++; }
+    if(y < dtState.minY || y > dtState.maxY) return;
+    if(y === now.getFullYear() && m > now.getMonth()) return;
+    dtState.y = y; dtState.m = m; dtDraw();
+  }
+  function dtPickYear(y){ dtState.y = y; dtClampMonth(); dtState.view = 'days'; dtDraw(); }
+  function dtPickMonth(m){ dtState.m = m; dtState.view = 'days'; dtDraw(); }
+  function dtPickDay(d){
+    const id = dtState.id, el = document.getElementById(id);
+    el.value = dtPad(d)+'-'+dtPad(dtState.m+1)+'-'+dtState.y;
+    dtClose(); dtShow(id,'');
+  }
+  function dtToday(){
+    const n = new Date(); dtState.y = n.getFullYear(); dtState.m = n.getMonth(); dtPickDay(n.getDate());
+  }
+  function dtDraw(){
+    const old = document.getElementById('dtPop'); if(old) old.remove();
+    const S = dtState, now = new Date(), cy = now.getFullYear(), cm = now.getMonth();
+    let head = '', body = '';
+    if(S.view === 'days'){
+      const first = new Date(S.y, S.m, 1).getDay(), days = new Date(S.y, S.m+1, 0).getDate();
+      const prevOff = (S.y===S.minY && S.m===0), nextOff = (S.y===cy && S.m===cm);
+      head = `<div class="dt-head"><button ${prevOff?'disabled':''} onclick="dtNav(-1)">‹</button>
+        <div class="dt-mid"><button onclick="dtView('months')">${DT_MONTHS[S.m]} ▾</button><button onclick="dtView('years')">${S.y} ▾</button></div>
+        <button ${nextOff?'disabled':''} onclick="dtNav(1)">›</button></div>`;
+      let cells = ['S','M','T','W','T','F','S'].map(d=>`<div class="dt-h">${d}</div>`).join('') + '<div></div>'.repeat(first);
+      for(let d=1; d<=days; d++){
+        const future = new Date(S.y, S.m, d) > now;
+        const sel = (d===S.selD && S.y===S.selY && S.m===S.selM);
+        cells += `<button type="button" class="dt-d ${future?'off':''} ${sel?'sel':''}" onclick="dtPickDay(${d})">${d}</button>`;
+      }
+      body = `<div class="dt-grid">${cells}</div>
+        <div class="dt-foot"><button class="btn btn-outline btn-small" onclick="dtToday()">Today</button><button class="btn btn-outline btn-small" onclick="dtClose()">Close</button></div>`;
+    } else if(S.view === 'months'){
+      head = `<div class="dt-head"><div class="dt-mid"><button onclick="dtView('years')">${S.y} ▾</button></div></div>`;
+      body = '<div class="dt-months">' + DT_MONTHS.map((n,i)=>{
+        const off = (S.y===cy && i>cm);
+        return `<button type="button" class="${i===S.m?'sel':''}" ${off?'disabled':''} onclick="dtPickMonth(${i})">${n.slice(0,3)}</button>`;
+      }).join('') + '</div><div class="dt-foot"><button class="btn btn-outline btn-small" onclick="dtView(\'days\')">Back</button></div>';
+    } else {
+      head = `<div class="dt-head"><div class="dt-mid"><button onclick="dtView('months')">${DT_MONTHS[S.m]} ▾</button></div></div>`;
+      let ys = '';
+      for(let y=S.minY; y<=S.maxY; y++) ys += `<button type="button" data-y="${y}" class="${y===S.y?'sel':''}" onclick="dtPickYear(${y})">${y}</button>`;
+      body = `<div class="dt-years" id="dtYears">${ys}</div><div class="dt-foot"><button class="btn btn-outline btn-small" onclick="dtView('days')">Back</button></div>`;
+    }
+    const o = document.createElement('div'); o.className = 'modal-backdrop'; o.id = 'dtPop';
+    o.innerHTML = `<div class="modal">${head}${body}</div>`;
+    o.addEventListener('click', e=>{ if(e.target===o) dtClose(); });
+    document.body.appendChild(o);
+    if(S.view === 'years'){                       // open at 1985 (or the field's own year)
+      const box = document.getElementById('dtYears');
+      const target = Math.min(Math.max(S.openY, S.minY), S.maxY);
+      const btn = box.querySelector(`[data-y="${target}"]`);
+      if(btn) box.scrollTop = btn.offsetTop - box.offsetTop - 8;
+    }
+  }
+
+  Object.assign(window,{dtMask,dtOpen,dtClose,dtView,dtNav,dtPickYear,dtPickMonth,dtPickDay,dtToday});  // inline handlers need global access
 
   function showToast(msg){
     const t = $('#toast');
@@ -558,6 +715,7 @@ if (navigator.storage && navigator.storage.persist) {
   async function load(){
     const val = await storageGet(STORE_KEY);
     if(val){ try{ db = JSON.parse(val); }catch(e){ /* corrupt, keep defaults */ } }
+    dtNormalizeDb();
     render();
     driveShowWarning();
   }
@@ -582,7 +740,7 @@ if (navigator.storage && navigator.storage.persist) {
     const v = driveLastGet();
     if(!v) return 'Last Drive backup: never';
     const d = new Date(v);
-    return 'Last Drive backup: ' + d.toLocaleDateString('en-GB') + ' ' + d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+    return 'Last Drive backup: ' + dtPad(d.getDate())+'-'+dtPad(d.getMonth()+1)+'-'+d.getFullYear() + ' ' + d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
   }
 
   function driveGetToken(){
@@ -674,6 +832,7 @@ if (navigator.storage && navigator.storage.persist) {
       groups: parsed.groups || [], subgroups: parsed.subgroups || [], entries: parsed.entries || [],
       lastGroupId: parsed.lastGroupId || null, lastSubgroupId: parsed.lastSubgroupId || null
     };
+    dtNormalizeDb();
     save();
     showPopup('Restored from Google Drive');
     render();
@@ -803,7 +962,7 @@ if (navigator.storage && navigator.storage.persist) {
     const blob = new Blob([JSON.stringify(db, null, 2)], {type:'application/json'});
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
-    const stamp = new Date().toISOString().slice(0,10);
+    const stamp = todayStr();
     a.href = url;
     a.download = `digital-address-book-backup-${stamp}.json`;
     document.body.appendChild(a); a.click(); document.body.removeChild(a);
@@ -831,6 +990,7 @@ if (navigator.storage && navigator.storage.persist) {
             lastGroupId: parsed.lastGroupId || null,
             lastSubgroupId: parsed.lastSubgroupId || null
           };
+          dtNormalizeDb();
           save();
           showPopup('Backup restored');
           render();
@@ -958,10 +1118,10 @@ if (navigator.storage && navigator.storage.persist) {
       <input type="tel" id="aWa" placeholder="WhatsApp number">
       <label>Email ID</label>
       <input type="email" id="aEmail" placeholder="name@example.com">
-      <label>Birthday (DD/MM/YYYY)</label>
-      <input type="text" id="aBday" placeholder="e.g. 05/08/1990">
-      <label>Wedding Anniversary (DD/MM/YYYY)</label>
-      <input type="text" id="aAnniv" placeholder="e.g. 21/12/2015">
+      <label>Birthday (DD-MM-YYYY)</label>
+      ${dtHtml('aBday','birthday','')}
+      <label>Wedding Anniversary (DD-MM-YYYY)</label>
+      ${dtHtml('aAnniv','anniversary','')}
       <button class="btn btn-primary" id="saveAddr">Save Entry</button>
     `;
     function refreshSub(preserveSub){
@@ -987,9 +1147,8 @@ if (navigator.storage && navigator.storage.persist) {
       if(!groupId){ showToast('Choose a group'); return; }
       if(!subgroupId){ showToast('Choose a subgroup'); return; }
       if(!name){ showToast('Enter a name'); return; }
-      const bdayRaw = $('#aBday').value.trim(), annivRaw = $('#aAnniv').value.trim();
-      if(bdayRaw && !parseDMY(bdayRaw)){ showToast('Birthday must be DD/MM/YYYY, e.g. 05/08/1990'); return; }
-      if(annivRaw && !parseDMY(annivRaw)){ showToast('Anniversary must be DD/MM/YYYY, e.g. 21/12/2015'); return; }
+      const dts = dtCheckBoth('aBday','aAnniv'); if(!dts) return;
+      const bdayRaw = dts.bday, annivRaw = dts.anniv;
       const addressText = $('#aAddr').value.trim();
       db.entries.push({
         id: uid('e'), groupId, subgroupId, name,
@@ -1131,10 +1290,10 @@ if (navigator.storage && navigator.storage.persist) {
       <input type="tel" id="eWa" value="${e.whatsapp||''}">
       <label>Email ID</label>
       <input type="email" id="eEmail" value="${e.email||''}">
-      <label>Birthday (DD/MM/YYYY)</label>
-      <input type="text" id="eBday" value="${e.birthday||''}" placeholder="e.g. 05/08/1990">
-      <label>Wedding Anniversary (DD/MM/YYYY)</label>
-      <input type="text" id="eAnniv" value="${e.anniversary||''}" placeholder="e.g. 21/12/2015">
+      <label>Birthday (DD-MM-YYYY)</label>
+      ${dtHtml('eBday','birthday',dtNorm(e.birthday))}
+      <label>Wedding Anniversary (DD-MM-YYYY)</label>
+      ${dtHtml('eAnniv','anniversary',dtNorm(e.anniversary))}
       <button class="btn btn-primary" id="updAddr">Update Entry</button>
       <button class="btn btn-danger" style="width:100%;margin-top:10px;" id="delAddr">Delete Entry</button>
       <button class="btn btn-outline" style="width:100%;margin-top:10px;" id="cancelA">Cancel</button>
@@ -1167,9 +1326,8 @@ if (navigator.storage && navigator.storage.persist) {
       $('#eGroup').onchange = ()=>refreshSub(false);
       $('#eSub').addEventListener('change', refreshRelated);
       $('#updAddr').onclick = ()=>{
-        const bdayRaw = $('#eBday').value.trim(), annivRaw = $('#eAnniv').value.trim();
-        if(bdayRaw && !parseDMY(bdayRaw)){ showToast('Birthday must be DD/MM/YYYY, e.g. 05/08/1990'); return; }
-        if(annivRaw && !parseDMY(annivRaw)){ showToast('Anniversary must be DD/MM/YYYY, e.g. 21/12/2015'); return; }
+        const dts = dtCheckBoth('eBday','eAnniv'); if(!dts) return;
+        const bdayRaw = dts.bday, annivRaw = dts.anniv;
         const relatedVal = $('#eRelated').value;
         if(relatedVal===e.id){ showToast('An entry cannot be related to itself'); return; }
         const addressText = $('#eAddr').value.trim();
@@ -1468,7 +1626,7 @@ if (navigator.storage && navigator.storage.persist) {
           if(year && parsed.year !== year) return;
           rows.push({ name: e.name, type: label, day: parsed.day, month: parsed.month, year: parsed.year,
                       groupId: e.groupId, subgroupId: e.subgroupId,
-                      dateStr: `${String(parsed.day).padStart(2,'0')}/${String(parsed.month).padStart(2,'0')}/${parsed.year}` });
+                      dateStr: `${String(parsed.day).padStart(2,'0')}-${String(parsed.month).padStart(2,'0')}-${parsed.year}` });
         });
       });
       rows.sort((a,b)=> a.day - b.day || a.name.localeCompare(b.name));
@@ -1681,7 +1839,7 @@ if (navigator.storage && navigator.storage.persist) {
     return (text||'').toString().trim().replace(/[^A-Za-z0-9]+/g,'-').replace(/^-+|-+$/g,'') || 'File';
   }
   function todayStr(){
-    return new Date().toISOString().slice(0,10);
+    const n = new Date(); return String(n.getDate()).padStart(2,'0')+'-'+String(n.getMonth()+1).padStart(2,'0')+'-'+n.getFullYear();
   }
   function newDoc(title){
     const { jsPDF } = window.jspdf;
