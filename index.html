@@ -746,25 +746,49 @@ if (navigator.storage && navigator.storage.persist) {
     return 'Last Drive backup: ' + dtPad(d.getDate())+'-'+dtPad(d.getMonth()+1)+'-'+d.getFullYear() + ' ' + d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
   }
 
+  const DRIVE_EMAIL_KEY = 'asm_ab_drive_email';   // Gmail used for Drive, remembered so Google skips the account list
+  function driveEmailGet(){ try{ return localStorage.getItem(DRIVE_EMAIL_KEY)||''; }catch(e){ return ''; } }
+  function driveEmailSet(v){ try{ localStorage.setItem(DRIVE_EMAIL_KEY, v); }catch(e){} }
+  async function driveRememberEmail(token){
+    if(driveEmailGet()) return;
+    try{
+      const r = await fetch('https://www.googleapis.com/drive/v3/about?fields=user(emailAddress)', {headers:{Authorization:'Bearer '+token}});
+      if(!r.ok) return;
+      const j = await r.json();
+      if(j && j.user && j.user.emailAddress) driveEmailSet(j.user.emailAddress);
+    }catch(e){}
+  }
+  let driveClient = null, driveWaiter = null;
   function driveGetToken(){
     return new Promise((resolve, reject)=>{
       if(driveToken && Date.now() < driveTokenExp) return resolve(driveToken);
       if(!(window.google && google.accounts && google.accounts.oauth2)){
         return reject(new Error('Google sign-in not available. Check internet / open in Chrome.'));
       }
-      const client = google.accounts.oauth2.initTokenClient({
-        client_id: DRIVE_CLIENT_ID,
-        scope: DRIVE_SCOPE,
-        callback: (resp)=>{
-          if(resp.error){ driveFlagSet(false); return reject(new Error('Sign-in failed')); }
-          driveFlagSet(true);
-          driveToken = resp.access_token;
-          driveTokenExp = Date.now() + (Number(resp.expires_in||3600) - 60) * 1000;
-          resolve(driveToken);
-        },
-        error_callback: ()=> reject(new Error('Sign-in cancelled'))
-      });
-      client.requestAccessToken({prompt: driveFlagGet() ? '' : 'consent'});
+      if(!driveClient){
+        driveClient = google.accounts.oauth2.initTokenClient({
+          client_id: DRIVE_CLIENT_ID,
+          scope: DRIVE_SCOPE,
+          callback: (resp)=>{
+            if(resp && resp.access_token){
+              driveFlagSet(true);
+              driveToken = resp.access_token;
+              driveTokenExp = Date.now() + (Number(resp.expires_in||3600) - 60) * 1000;
+              driveRememberEmail(driveToken);
+              if(driveWaiter){ driveWaiter.resolve(driveToken); driveWaiter = null; }
+            } else {
+              driveFlagSet(false);
+              if(driveWaiter){ driveWaiter.reject(new Error('Sign-in failed')); driveWaiter = null; }
+            }
+          },
+          error_callback: ()=>{ if(driveWaiter){ driveWaiter.reject(new Error('Sign-in cancelled')); driveWaiter = null; } }
+        });
+      }
+      driveWaiter = {resolve, reject};
+      const o = {prompt: driveFlagGet() ? '' : 'consent'};
+      const em = driveEmailGet();
+      if(em){ o.login_hint = em; o.hint = em; }
+      driveClient.requestAccessToken(o);
     });
   }
 
