@@ -732,6 +732,9 @@ if (navigator.storage && navigator.storage.persist) {
   const DRIVE_WARN_DAYS = 4;      // warn if last backup older than this
   const DRIVE_WARN_MS = 4000;     // warning disappears after 4 sec
   let driveToken = null, driveTokenExp = 0;
+  const DRIVE_FLAG_KEY = 'asm_ab_drive_signed';   // set once after first successful sign-in
+  function driveFlagGet(){ try{ return localStorage.getItem(DRIVE_FLAG_KEY)==='1'; }catch(e){ return false; } }
+  function driveFlagSet(v){ try{ if(v) localStorage.setItem(DRIVE_FLAG_KEY,'1'); else localStorage.removeItem(DRIVE_FLAG_KEY); }catch(e){} }
 
   function driveFileName(year){ return DRIVE_APP_NAME + '-' + (year || new Date().getFullYear()) + '.json'; }
   function driveLastGet(){ try{ return localStorage.getItem(DRIVE_LAST_KEY); }catch(e){ return null; } }
@@ -753,14 +756,15 @@ if (navigator.storage && navigator.storage.persist) {
         client_id: DRIVE_CLIENT_ID,
         scope: DRIVE_SCOPE,
         callback: (resp)=>{
-          if(resp.error) return reject(new Error('Sign-in failed'));
+          if(resp.error){ driveFlagSet(false); return reject(new Error('Sign-in failed')); }
+          driveFlagSet(true);
           driveToken = resp.access_token;
           driveTokenExp = Date.now() + (Number(resp.expires_in||3600) - 60) * 1000;
           resolve(driveToken);
         },
         error_callback: ()=> reject(new Error('Sign-in cancelled'))
       });
-      client.requestAccessToken({prompt: driveToken ? '' : 'select_account'});
+      client.requestAccessToken({prompt: driveFlagGet() ? '' : 'consent'});
     });
   }
 
