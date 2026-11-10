@@ -392,6 +392,20 @@ if (navigator.storage && navigator.storage.persist) {
     margin:16px 0 8px;
   }
   .section-heading:first-child{ margin-top:0; }
+  /* ---- collapsible Group > Subgroup accordion (shared by Modify + View) ---- */
+  .acc-head{display:flex;align-items:center;gap:8px;cursor:pointer;user-select:none;-webkit-tap-highlight-color:transparent;}
+  .acc-g{background:var(--paper);border:1px solid var(--line);border-left:4px solid var(--teal);border-radius:10px;padding:13px 14px;margin-bottom:8px;font-family:'Fraunces',serif;font-weight:700;font-size:16px;color:var(--teal-dark);}
+  .acc-g.open{background:var(--brass-soft);}
+  .acc-s{background:var(--paper);border:1px solid var(--line);border-left:4px solid var(--brass);border-radius:10px;padding:10px 12px;margin:0 0 8px 14px;font-weight:600;font-size:14px;color:var(--teal-dark);}
+  .acc-s.open{background:var(--brass-soft);}
+  .acc-arrow{font-size:11px;width:12px;transition:transform .15s;}
+  .acc-head.open .acc-arrow{transform:rotate(90deg);}
+  .acc-title{flex:1;}
+  .acc-count{font-family:'Inter',sans-serif;font-size:12px;font-weight:600;color:var(--teal-dark);background:var(--brass-soft);padding:2px 10px;border-radius:20px;}
+  .acc-g.open .acc-count,.acc-s.open .acc-count{background:var(--paper);}
+  .acc-sbody{margin-left:14px;}
+  .acc-sel{display:flex;align-items:center;gap:5px;font-size:12px;font-weight:600;text-transform:none;letter-spacing:normal;color:var(--teal-dark);margin:0;}
+  .acc-sel input[type=checkbox]{width:16px;height:16px;}
   .card-item label{
     display:flex;
     align-items:flex-start;
@@ -499,7 +513,7 @@ if (navigator.storage && navigator.storage.persist) {
 (function(){
   const STORE_KEY = 'kudumbam-db-v1';
   let db = { groups: [], subgroups: [], entries: [] };
-  let state = { tab: 'create', entity: 'address', editingId: null, filterGroup:'', filterSubgroup:'', selectedIds: new Set() };
+  let state = { tab: 'create', entity: 'address', editingId: null, filterGroup:'', filterSubgroup:'', selectedIds: new Set(), acc: { modify:{g:null,s:null}, view:{g:null,s:null} } };
 
   const $ = sel => document.querySelector(sel);
   const screen = $('#screen');
@@ -1372,6 +1386,7 @@ if (navigator.storage && navigator.storage.persist) {
         e.email = $('#eEmail').value.trim();
         e.birthday = bdayRaw;
         e.anniversary = annivRaw;
+        state.acc.modify = { g:e.groupId, s:e.subgroupId };   // come back to where this entry now lives
         save(); state.editingId=null; showToast('Entry updated'); render();
       };
       $('#delAddr').onclick = ()=>{
@@ -1388,42 +1403,23 @@ if (navigator.storage && navigator.storage.persist) {
       $('#cancelA').onclick = ()=>{ state.editingId=null; render(); };
       return;
     }
-    screen.innerHTML = `
-      <div class="section-label">Modify Address Entries</div>
-      <div class="filterbar">
-        <select id="fGroup">${selectOptions(db.groups,'id',g=>g.name,'All groups')}</select>
-        <select id="fSub"><option value="">All subgroups</option></select>
-      </div>
-      <div id="maList"></div>
-    `;
-    function refreshSubFilter(preserveSub){
-      const gid = $('#fGroup').value;
-      const list = gid ? subgroupsFor(gid) : db.subgroups;
-      $('#fSub').innerHTML = selectOptions(list,'id',s=>s.name,'All subgroups');
-      if(preserveSub) $('#fSub').value = preserveSub;
-    }
-    function refresh(){
-      const gid = $('#fGroup').value, sid = $('#fSub').value;
-      const list = entriesFor(gid, sid);
-      const ordered = buildRelationOrder(list);
-      $('#maList').innerHTML = ordered.map(({entry:e, depth})=>`
+    screen.innerHTML = `<div class="section-label">Modify Address Entries</div><div id="maList"></div>`;
+    function modifyCard(e, depth){
+      return `
         <div class="card-item" style="${depth>0 ? `margin-left:${depth*20}px;border-left-color:var(--teal);` : ''}">
-          ${depth>0 ? `<span class="count-pill">↳ related to ${(db.entries.find(x=>x.id===e.relatedTo)||{}).name||''}</span><br>` : ''}
+          ${depth>0 ? `<span class="count-pill" style="margin-left:0;">↳ related to ${(db.entries.find(x=>x.id===e.relatedTo)||{}).name||''}</span><br>` : ''}
           <span class="name">${e.name}</span>
           ${e.company ? `<span class="tag">${e.company}</span>` : ''}
-          <span class="tag">${groupName(e.groupId)}</span>
-          <span class="tag">${subgroupName(e.subgroupId)}</span>
           ${e.note ? `<div class="note-line">${e.note}</div>` : ''}
           <div class="contact-line">${e.contact1||''}</div>
           <div class="card-actions"><button class="btn btn-outline btn-small" data-edit="${e.id}">Edit</button></div>
-        </div>`).join('') || `<div class="empty"><div class="big">No entries found</div>Try a different filter or create one.</div>`;
-      screen.querySelectorAll('[data-edit]').forEach(b=> b.onclick = ()=>{ state.editingId=b.dataset.edit; renderModifyAddress(); });
+        </div>`;
     }
-    if(state.modifyFilterGroup) $('#fGroup').value = state.modifyFilterGroup;
-    refreshSubFilter(state.modifyFilterSub);
-    $('#fGroup').onchange = ()=>{ refreshSubFilter(); refresh(); };
-    $('#fSub').onchange = refresh;
-    refresh();
+    renderAccordion($('#maList'), db.entries.slice(), {
+      key: 'modify',
+      cardFn: modifyCard,
+      afterDraw: ()=> screen.querySelectorAll('[data-edit]').forEach(b=> b.onclick = ()=>{ state.editingId=b.dataset.edit; renderModifyAddress(); })
+    });
   }
 
   // ---------------- VIEW / PDF ----------------
@@ -1463,33 +1459,20 @@ if (navigator.storage && navigator.storage.persist) {
   }
 
   function renderViewAddress(){
-    let revealed = false;
     screen.innerHTML = `
       ${viewHead('Address Book')}
-      <div class="filterbar">
-        <select id="pfGroup">${selectOptions(db.groups,'id',g=>g.name,'All groups')}</select>
-        <select id="pfSub"><option value="">All subgroups</option></select>
-      </div>
-      <div class="selectall-row" id="selectAllRow" style="display:none;">
-        <label><input type="checkbox" id="selectAllChk"> Select all shown</label>
-        <span class="count-pill" id="selCount"></span>
-      </div>
-      <div id="pvList"><div class="empty"><div class="big">Choose Group &amp; Subgroup</div>Select both above to view matching entries here.</div></div>
+      <div class="selectall-row"><span class="count-pill" id="selCount" style="margin-left:0;"></span></div>
+      <div id="pvList"></div>
       <div style="display:none">
         <button id="pdfAddr"></button><button id="pdfAll"></button><button id="pdfAllGS"></button>
       </div>
     `;
     $('#pdfTop').onclick = ()=> pdfChoice([
-      {label:'Selected entries (shown below)', run:()=> $('#pdfAddr').click()},
+      {label:'Selected / open group entries', run:()=> $('#pdfAddr').click()},
       {label:'All entries', run:()=> $('#pdfAll').click()},
       {label:'Grouped (Group / Subgroup)', run:()=> $('#pdfAllGS').click()}
     ]);
-    function currentFiltered(){
-      return entriesFor($('#pfGroup').value, $('#pfSub').value);
-    }
-    function updateSelectAllState(list){
-      $('#selectAllChk').checked = list.length>0 && list.every(e=>state.selectedIds.has(e.id));
-    }
+    function viewScope(){ const a = state.acc.view; return { gid: a.g||'', sid: a.s||'' }; }
     function updateCount(){
       $('#selCount').textContent = state.selectedIds.size ? `${state.selectedIds.size} selected (across any group/subgroup)` : '';
     }
@@ -1504,8 +1487,6 @@ if (navigator.storage && navigator.storage.persist) {
             <span class="card-body">
               <span class="name">${e.name}</span>
               ${e.company ? `<span class="tag">${e.company}</span>` : ''}
-              <span class="tag">${groupName(e.groupId)}</span>
-              <span class="tag">${subgroupName(e.subgroupId)}</span>
               ${e.note ? `<div class="note-line">${e.note}</div>` : ''}
               <div class="addr addr-box">${(e.address||'').replace(/</g,'&lt;')}</div>
               <div class="contact-line">📞 ${e.contact1||'—'} ${e.contact2? ' / '+e.contact2:''}</div>
@@ -1515,61 +1496,48 @@ if (navigator.storage && navigator.storage.persist) {
           </label>
         </div>`;
     }
-    function refresh(){
-      const gid = $('#pfGroup').value, sid = $('#pfSub').value;
-      const list = currentFiltered();
-      if(sid){
-        const ordered = buildRelationOrder(list);
-        $('#pvList').innerHTML = ordered.map(({entry,depth})=>cardHtml(entry,depth)).join('') || `<div class="empty"><div class="big">No entries found</div>Try a different filter.</div>`;
-      } else {
-        const sections = buildGroupSubgroupSections(list);
-        $('#pvList').innerHTML = sections.map(sec => `
-          <div class="section-heading">${groupName(sec.groupId)} , ${subgroupName(sec.subgroupId)}</div>
-          ${buildRelationOrder(sec.entries).map(({entry,depth})=>cardHtml(entry,depth)).join('')}
-        `).join('') || `<div class="empty"><div class="big">No entries found</div>Try a different filter.</div>`;
-      }
+    function subHeadHtml(sub){
+      const all = sub.entries.length>0 && sub.entries.every(e=>state.selectedIds.has(e.id));
+      return `<label class="acc-sel"><input type="checkbox" class="subChk" data-ids="${sub.entries.map(e=>e.id).join(',')}" ${all?'checked':''}> Select all</label>`;
+    }
+    function syncSubChecks(){
+      screen.querySelectorAll('.subChk').forEach(chk=>{
+        chk.checked = chk.dataset.ids.split(',').every(id=>state.selectedIds.has(id));
+      });
+    }
+    function wire(){
       screen.querySelectorAll('.entryChk').forEach(chk=>{
         chk.onchange = ()=>{
           if(chk.checked) state.selectedIds.add(chk.dataset.id);
           else state.selectedIds.delete(chk.dataset.id);
-          updateSelectAllState(list);
+          syncSubChecks(); updateCount();
+        };
+      });
+      screen.querySelectorAll('.subChk').forEach(chk=>{
+        chk.onchange = ()=>{
+          const ids = chk.dataset.ids.split(',');
+          ids.forEach(id=>{ if(chk.checked) state.selectedIds.add(id); else state.selectedIds.delete(id); });
+          screen.querySelectorAll('.entryChk').forEach(c=>{ if(ids.includes(c.dataset.id)) c.checked = chk.checked; });
           updateCount();
         };
       });
-      updateSelectAllState(list);
       updateCount();
     }
-    function reveal(){
-      if(revealed) return;
-      revealed = true;
-      $('#selectAllRow').style.display = 'flex';
-      $('#pdfAddr').style.display = 'inline-flex';
-    }
-    function refreshSubFilter(){
-      const gid = $('#pfGroup').value;
-      const list = gid ? subgroupsFor(gid) : db.subgroups;
-      $('#pfSub').innerHTML = selectOptions(list,'id',s=>s.name,'All subgroups');
-    }
-    refreshSubFilter();
-    $('#pfGroup').onchange = ()=>{ refreshSubFilter(); reveal(); refresh(); };
-    $('#pfSub').onchange = ()=>{ reveal(); refresh(); };
-    $('#selectAllChk').onchange = ()=>{
-      const list = currentFiltered();
-      if($('#selectAllChk').checked){ list.forEach(e=>state.selectedIds.add(e.id)); }
-      else{ list.forEach(e=>state.selectedIds.delete(e.id)); }
-      refresh();
-    };
+    renderAccordion($('#pvList'), db.entries.slice(), { key:'view', cardFn:cardHtml, subHead:subHeadHtml, afterDraw:wire });
+
     $('#pdfAddr').onclick = ()=>{
       let list, note, filename;
+      const { gid, sid } = viewScope();
       if(state.selectedIds.size>0){
         list = db.entries.filter(e=>state.selectedIds.has(e.id));
         note = 'Selected Entries';
         filename = `Selected-Entries-${todayStr()}.pdf`;
-      } else {
-        const gid = $('#pfGroup').value, sid = $('#pfSub').value;
+      } else if(gid){
         list = entriesFor(gid, sid);
-        note = [gid?groupName(gid):null, sid?subgroupName(sid):null].filter(Boolean).join(' / ') || null;
-        filename = gid ? `${slug(groupName(gid))}${sid?'-'+slug(subgroupName(sid)):'-All-Subgroups'}.pdf` : 'Digital-Address-Book-Filtered.pdf';
+        note = [groupName(gid), sid?subgroupName(sid):null].filter(Boolean).join(' / ');
+        filename = `${slug(groupName(gid))}${sid?'-'+slug(subgroupName(sid)):'-All-Subgroups'}.pdf`;
+      } else {
+        showToast('Tick entries or open a group first'); return;
       }
       exportAddressPdf(list, note, false, filename);
     };
@@ -1583,7 +1551,7 @@ if (navigator.storage && navigator.storage.persist) {
       exportAddressPdf(sorted, 'All Entries', false, 'Digital-Address-Book-All.pdf');
     };
     $('#pdfAllGS').onclick = ()=>{
-      const gid = $('#pfGroup').value, sid = $('#pfSub').value;
+      const { gid, sid } = viewScope();
       const flat = entriesFor(gid, sid);
       const pairs = buildGroupSubgroupSections(flat);
       let filename;
@@ -1860,6 +1828,52 @@ if (navigator.storage && navigator.storage.persist) {
       groupName(a.groupId).localeCompare(groupName(b.groupId)) ||
       subgroupName(a.subgroupId).localeCompare(subgroupName(b.subgroupId))
     );
+  }
+
+  // ---------------- ACCORDION (shared: Group > Subgroup > Entries) ----------------
+  // o = { key:'modify'|'view', cardFn(entry,depth)->html, subHead?(sub)->html, afterDraw?(), empty?:html }
+  function buildAccTree(list){
+    const gm = new Map();
+    list.forEach(e=>{
+      if(!gm.has(e.groupId)) gm.set(e.groupId, { groupId:e.groupId, total:0, subs:new Map() });
+      const g = gm.get(e.groupId); g.total++;
+      if(!g.subs.has(e.subgroupId)) g.subs.set(e.subgroupId, { subgroupId:e.subgroupId, entries:[] });
+      g.subs.get(e.subgroupId).entries.push(e);
+    });
+    return [...gm.values()]
+      .map(g=>({ groupId:g.groupId, total:g.total,
+        subs:[...g.subs.values()].sort((a,b)=>subgroupName(a.subgroupId).localeCompare(subgroupName(b.subgroupId))) }))
+      .sort((a,b)=>groupName(a.groupId).localeCompare(groupName(b.groupId)));
+  }
+  function renderAccordion(host, list, o){
+    const S = state.acc[o.key];
+    const tree = buildAccTree(list);
+    function draw(){
+      host.innerHTML = tree.map(g=>{
+        const gOpen = S.g===g.groupId;
+        const body = gOpen ? g.subs.map(sub=>{
+          const sOpen = S.s===sub.subgroupId;
+          const cards = sOpen ? `<div class="acc-sbody">${buildRelationOrder(sub.entries).map(({entry,depth})=>o.cardFn(entry,depth)).join('')}</div>` : '';
+          return `<div class="acc-sub">
+            <div class="acc-head acc-s ${sOpen?'open':''}" data-accs="${sub.subgroupId}">
+              <span class="acc-arrow">▶</span><span class="acc-title">${subgroupName(sub.subgroupId)}</span>${o.subHead ? o.subHead(sub) : ''}<span class="acc-count">${sub.entries.length}</span>
+            </div>${cards}</div>`;
+        }).join('') : '';
+        return `<div class="acc-group">
+          <div class="acc-head acc-g ${gOpen?'open':''}" data-accg="${g.groupId}">
+            <span class="acc-arrow">▶</span><span class="acc-title">${groupName(g.groupId)}</span><span class="acc-count">${g.total}</span>
+          </div>${gOpen ? `<div class="acc-body">${body}</div>` : ''}</div>`;
+      }).join('') || (o.empty || `<div class="empty"><div class="big">No entries yet</div>Create one from the Create tab.</div>`);
+      if(o.afterDraw) o.afterDraw();
+    }
+    host.onclick = ev=>{
+      if(ev.target.closest('.acc-sel')) return;             // tick-box inside a header must not toggle it
+      const gh = ev.target.closest('[data-accg]');
+      if(gh){ const id = gh.dataset.accg; S.g = (S.g===id) ? null : id; S.s = null; draw(); return; }
+      const sh = ev.target.closest('[data-accs]');
+      if(sh){ const id = sh.dataset.accs; S.s = (S.s===id) ? null : id; draw(); }
+    };
+    draw();
   }
 
   // ---------------- PDF EXPORT ----------------
